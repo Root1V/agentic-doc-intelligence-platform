@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: idp
+      POSTGRES_PASSWORD: idp
+      POSTGRES_DB: idp
+    ports:
+      - "5433:5432"  # 5432 is already taken locally (e.g. by another project's postgres)
+    volumes:
+      - idp_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U idp -d idp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: idp
+      MINIO_ROOT_PASSWORD: idp12345
+    ports:
+      - "9002:9000"  # 9000 is already taken locally (e.g. by another project's clickhouse)
+      - "9003:9001"
+    volumes:
+      - idp_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  idp_postgres_data:
+  idp_minio_data:

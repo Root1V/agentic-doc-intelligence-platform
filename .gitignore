@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+.DS_Store
+*.log
+# Real scanned sample documents (visible PII: name, salary, DNI) — same
+# treatment as expected_extractions/, keep the whole directory out.
+/tests/fixtures/documents/
+
+# Real source documents and their extraction outputs contain third-party
+# PII (DNI, income, address, phone, ID scans) — never commit these.
+/documents/
+/output/
+# Golden fixtures contain real PII (names, salaries, DNI) of identifiable
+# people, whether from the PoC's own sample images or real loan documents —
+# keep the whole directory out of history rather than pick files by hand.
+/tests/golden/expected_extractions/
+
+.claude/

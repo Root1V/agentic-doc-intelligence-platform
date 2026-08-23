@@ -1,0 +1,57 @@
+[project]
+name = "idp"
+version = "0.1.0"
+description = "Plataforma de inteligencia documental agentica — clasificacion, extraccion y validacion de documentos empresariales"
+readme = "README.md"
+authors = [
+    { name = "Victor Espiritu", email = "espiritusantiagovictor@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.19.1",
+    "asyncpg>=0.31.0",
+    "boto3>=1.43.78",
+    "fastapi>=0.141.1",
+    "instructor>=1.15.4",
+    "numpy>=2.5.2",
+    "openai>=2.54.0",
+    "opentelemetry-api>=1.44.0",
+    "opentelemetry-sdk>=1.44.0",
+    "pillow>=12.3.0",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.15.0",
+    "python-multipart>=0.0.32",
+    "rapidfuzz>=3.14.5",
+    "sqlalchemy[asyncio]>=2.0.52",
+    "uvicorn[standard]>=0.52.4",
+]
+
+[project.optional-dependencies]
+docling = [
+    "docling>=2.121.0",
+]
+paddleocr = [
+    "paddleocr>=3.0",
+    "paddlepaddle>=3.3.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.16,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# Session-scoped loop: idp.persistence.db.get_session_factory caches an
+# AsyncEngine keyed by database_url (correct for a single long-running app
+# process) — pytest-asyncio's default per-test loop would attach that
+# cached engine's connections to a closed loop across test boundaries.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
