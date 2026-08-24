@@ -5,6 +5,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/apiClient'
 import type {
+  AuditLogResponse,
   BatchCreateResponse,
   BatchStatusResponse,
   DocumentDetailResponse,
@@ -151,6 +152,16 @@ export function useDocumentTypeCatalog() {
     queryKey: ['document-types'],
     queryFn: async () => {
       const { data } = await apiClient.get<DocumentTypeCatalogResponse>('/document-types')
+      return data
+    },
+  })
+}
+
+export function useAuditLog(params: { limit?: number; offset?: number } = {}) {
+  return useQuery({
+    queryKey: ['audit-log', params],
+    queryFn: async () => {
+      const { data } = await apiClient.get<AuditLogResponse>('/audit', { params })
       return data
     },
   })

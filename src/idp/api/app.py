@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from opentelemetry import trace
 
-from idp.api.routes import auth, batches, document_types, documents, review, type_suggestions
+from idp.api.routes import audit, auth, batches, document_types, documents, review, type_suggestions
 from idp.config import get_settings
 from idp.observability.otel import setup_tracing
 from idp.storage.object_store import S3ObjectStore
@@ -43,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(document_types.router)
     app.include_router(review.router)
     app.include_router(type_suggestions.router)
+    app.include_router(audit.router)
 
     @app.get("/health")
     async def health() -> dict:

@@ -247,6 +247,24 @@ class ReviewRepository:
         await self._session.flush()
         return entry
 
+    async def list_audit_entries(self, *, limit: int = 50, offset: int = 0) -> list[AuditLogEntry]:
+        # selectinload(review_item) avoids an N+1 — the API response needs
+        # document_id/field_path off the parent ReviewItem for every row.
+        stmt = (
+            select(AuditLogEntry)
+            .options(selectinload(AuditLogEntry.review_item))
+            .order_by(AuditLogEntry.timestamp.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def count_audit_entries(self) -> int:
+        stmt = select(func.count()).select_from(AuditLogEntry)
+        result = await self._session.execute(stmt)
+        return result.scalar_one()
+
 
 class TypeSuggestionRepository:
     """Backs ``api/routes/type_suggestions.py`` — the human-review queue

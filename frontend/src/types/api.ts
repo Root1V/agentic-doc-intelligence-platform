@@ -142,6 +142,24 @@ export interface DocumentTypeCatalogResponse {
   pending: PendingTypeInfo[]
 }
 
+export interface AuditEntry {
+  id: string
+  document_id: string
+  field_path: string
+  reviewer_identity: string
+  original_value: { value: unknown }
+  corrected_value: { value: unknown }
+  original_confidence: number
+  model_version: string | null
+  prompt_version: string | null
+  timestamp: string
+}
+
+export interface AuditLogResponse {
+  total: number
+  entries: AuditEntry[]
+}
+
 export interface LoginRequest {
   email: string
   password: string

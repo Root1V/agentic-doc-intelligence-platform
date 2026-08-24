@@ -8,6 +8,7 @@ import { DocumentDetailPage } from '@/pages/DocumentDetail'
 import { ReviewQueuePage } from '@/pages/ReviewQueue'
 import { TypeSuggestionsPage } from '@/pages/TypeSuggestions'
 import { DocumentTypesPage } from '@/pages/DocumentTypes'
+import { AuditPage } from '@/pages/Audit'
 
 export default function App() {
   return (
@@ -66,6 +67,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <DocumentTypesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/audit"
+        element={
+          <ProtectedRoute>
+            <AuditPage />
           </ProtectedRoute>
         }
       />
