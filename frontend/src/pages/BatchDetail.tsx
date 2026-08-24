@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
-import { useBatch } from '@/lib/queries'
+import { useBatch, useBatchLiveUpdates } from '@/lib/queries'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { DocumentThumbnail } from '@/components/documents/DocumentThumbnail'
@@ -19,6 +19,7 @@ const STATUS_LABEL: Record<string, string> = {
 export function BatchDetailPage() {
   const { batchId } = useParams<{ batchId: string }>()
   const { data: batch, isLoading } = useBatch(batchId)
+  useBatchLiveUpdates(batchId)
 
   if (isLoading) {
     return (

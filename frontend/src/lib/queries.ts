@@ -1,9 +1,9 @@
 // TanStack Query hooks, one per backend endpoint — cache/loading/error
-// states and the 2s batch-status polling (same cadence
-// scripts/run_fixture_batch.py already validates against the live stack)
-// come from the library instead of hand-rolled state machines.
+// states come from the library instead of hand-rolled state machines.
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/apiClient'
+import { getToken } from '@/lib/auth'
 import type {
   AppUser,
   AuditLogResponse,
@@ -58,8 +58,69 @@ export function useBatch(batchId: string | undefined) {
       return data
     },
     enabled: !!batchId,
-    refetchInterval: (query) => (query.state.data?.status && TERMINAL_BATCH_STATUSES.has(query.state.data.status) ? false : 2000),
+    // useBatchLiveUpdates (SSE) is the primary way this updates while a
+    // batch is processing — this interval is only a safety net in case the
+    // stream dies silently (e.g. a proxy buffering/dropping it), so it's
+    // deliberately much slower than the old 2s poll.
+    refetchInterval: (query) => (query.state.data?.status && TERMINAL_BATCH_STATUSES.has(query.state.data.status) ? false : 15000),
   })
+}
+
+/** Opens a Server-Sent Events connection to GET /batches/{id}/stream and
+ * pushes every update straight into the ['batch', batchId] query cache —
+ * every existing consumer of useBatch just re-renders, no separate state to
+ * thread through. Uses `fetch` with a manual Authorization header rather
+ * than the browser's native EventSource, which can't set custom headers
+ * (see the backend route's docstring for why the JWT isn't passed as a
+ * query param instead). No auto-reconnect loop: the backend generator ends
+ * the stream on its own once the batch reaches a terminal status, and
+ * useBatch's slow fallback poll above covers the rare case of the
+ * connection dying for another reason. */
+export function useBatchLiveUpdates(batchId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!batchId) return
+    const controller = new AbortController()
+
+    async function connect() {
+      const token = getToken()
+      let response: Response
+      try {
+        response = await fetch(`/api/batches/${batchId}/stream`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          signal: controller.signal,
+        })
+      } catch {
+        return
+      }
+      const reader = response.body?.getReader()
+      if (!reader) return
+      const decoder = new TextDecoder()
+      let buffer = ''
+      try {
+        while (true) {
+          const { value, done } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const frames = buffer.split('\n\n')
+          buffer = frames.pop() ?? ''
+          for (const frame of frames) {
+            const dataLine = frame.split('\n').find((line) => line.startsWith('data: '))
+            if (!dataLine) continue
+            const payload = JSON.parse(dataLine.slice('data: '.length)) as BatchStatusResponse
+            queryClient.setQueryData(['batch', batchId], payload)
+          }
+        }
+      } catch {
+        // Connection dropped mid-stream — the slow fallback poll on
+        // useBatch takes over rather than reconnecting here.
+      }
+    }
+
+    connect()
+    return () => controller.abort()
+  }, [batchId, queryClient])
 }
 
 export function useCreateBatch() {

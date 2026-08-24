@@ -1,23 +1,34 @@
-"""POST /batches (upload) and GET /batches/{id} (status + documents)."""
+"""POST /batches (upload), GET /batches/{id} (status + documents) and
+GET /batches/{id}/stream (the same payload, pushed over SSE as it changes —
+see the stream_batch docstring for why this polls the DB server-side
+instead of the client polling the REST endpoint every 2s)."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
+from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from idp.api.deps import get_app_settings, get_current_user, get_db_session, get_object_store, require_role
 from idp.api.schemas import DocumentSummary
 from idp.config import Settings
+from idp.persistence.db import get_session_factory
+from idp.persistence.models import Batch
 from idp.persistence.repositories import BatchRepository, DocumentRepository
 from idp.storage.object_store import S3ObjectStore
 from idp.worker.tasks import run_batch
 
 router = APIRouter(prefix="/batches", tags=["batches"], dependencies=[Depends(get_current_user)])
+
+_STREAM_POLL_SECONDS = 1.0
+_TERMINAL_BATCH_STATUSES = {"completed"}
 
 
 class BatchStatusResponse(BaseModel):
@@ -28,6 +39,28 @@ class BatchStatusResponse(BaseModel):
 
 class BatchCreateResponse(BaseModel):
     batch_id: uuid.UUID
+
+
+def _to_response(batch: Batch) -> BatchStatusResponse:
+    return BatchStatusResponse(
+        id=batch.id,
+        status=batch.status,
+        documents=[
+            DocumentSummary(
+                id=doc.id,
+                batch_id=doc.batch_id,
+                status=doc.status,
+                document_type=doc.document_type,
+                classification_confidence=doc.classification_confidence,
+                needs_review=doc.needs_review,
+                original_filename=doc.original_filename,
+                parent_document_id=doc.parent_document_id,
+                page_start=doc.page_start,
+                page_end=doc.page_end,
+            )
+            for doc in batch.documents
+        ],
+    )
 
 
 @router.post("", response_model=BatchCreateResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role("operador", "admin"))])
@@ -66,22 +99,50 @@ async def get_batch(batch_id: uuid.UUID, session: AsyncSession = Depends(get_db_
     batch = await batch_repo.get(batch_id)
     if batch is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="batch not found")
-    return BatchStatusResponse(
-        id=batch.id,
-        status=batch.status,
-        documents=[
-            DocumentSummary(
-                id=doc.id,
-                batch_id=doc.batch_id,
-                status=doc.status,
-                document_type=doc.document_type,
-                classification_confidence=doc.classification_confidence,
-                needs_review=doc.needs_review,
-                original_filename=doc.original_filename,
-                parent_document_id=doc.parent_document_id,
-                page_start=doc.page_start,
-                page_end=doc.page_end,
-            )
-            for doc in batch.documents
-        ],
-    )
+    return _to_response(batch)
+
+
+@router.get("/{batch_id}/stream")
+async def stream_batch(
+    batch_id: uuid.UUID,
+    request: Request,
+    settings: Settings = Depends(get_app_settings),
+) -> StreamingResponse:
+    """Server-Sent Events alternative to polling GET /batches/{id} every 2s
+    from the client. Deliberately NOT a real-time push wired directly from
+    orchestrator.py (e.g. an in-process pub/sub notified on every
+    ``set_status`` call) — that would only work correctly with a single
+    worker process and adds a fair amount of machinery for a UI-responsiveness
+    win. Polling the DB every second from inside the generator and only
+    emitting a frame when the payload actually changed gets the same
+    practical result (one persistent connection instead of a new HTTP
+    request every 2s, sub-2s latency) with no new moving parts; this is the
+    seam to swap for real push later if that ever proves insufficient.
+
+    Auth still goes through ``get_current_user`` like every other route
+    here (see the router's ``dependencies=``) — the frontend connects with
+    ``fetch`` + a manual ``Authorization`` header instead of the browser's
+    native ``EventSource`` specifically because ``EventSource`` cannot set
+    custom headers, and putting the JWT in the URL as a query param
+    instead would leak it into server access logs."""
+
+    async def event_generator() -> AsyncIterator[str]:
+        factory = get_session_factory(settings)
+        last_payload: str | None = None
+        while True:
+            if await request.is_disconnected():
+                return
+            async with factory() as session:
+                batch = await BatchRepository(session).get(batch_id)
+            if batch is None:
+                return
+            payload = _to_response(batch).model_dump_json()
+            is_terminal = batch.status in _TERMINAL_BATCH_STATUSES
+            if payload != last_payload:
+                yield f"data: {payload}\n\n"
+                last_payload = payload
+            if is_terminal:
+                return
+            await asyncio.sleep(_STREAM_POLL_SECONDS)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
