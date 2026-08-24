@@ -28,7 +28,7 @@ def create_app() -> FastAPI:
         # dropped instead of reaching the exporter.
         trace.get_tracer_provider().shutdown()  # type: ignore[union-attr]
 
-    app = FastAPI(title="Intelligent Document Platform", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Intelligent Document Platform", version="0.2.0", lifespan=lifespan)
     app.include_router(batches.router)
     app.include_router(documents.router)
     app.include_router(review.router)
