@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ClipboardCheck, FileText, Loader2, Sparkles, Upload } from 'lucide-react'
+import { ClipboardCheck, Clock, FileText, Loader2, Sparkles, Upload } from 'lucide-react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { useDocumentList, useReviewQueue, useTypeSuggestions } from '@/lib/queries'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,15 +8,35 @@ import { getUserName } from '@/lib/auth'
 
 const CHART_COLORS = ['#7c3aed', '#a78bfa', '#c4b5fd', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#6b7280']
 
+// Asunción explícita y configurable (no un dato medido) — ver .env.example.
+const ASSUMED_MINUTES_PER_DOCUMENT = Number(import.meta.env.VITE_ASSUMED_MINUTES_PER_DOCUMENT ?? 8)
+
+function formatHours(totalMinutes: number): string {
+  const hours = totalMinutes / 60
+  return hours >= 10 ? `${hours.toFixed(0)} h` : `${hours.toFixed(1)} h`
+}
+
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   completed: 'secondary',
   needs_review: 'destructive',
   failed: 'destructive',
 }
 
-function StatCard({ label, value, icon: Icon, to }: { label: string; value: number | string; icon: typeof FileText; to?: string }) {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  to,
+  hint,
+}: {
+  label: string
+  value: number | string
+  icon: typeof FileText
+  to?: string
+  hint?: string
+}) {
   const content = (
-    <Card className="transition-colors hover:border-primary/40">
+    <Card className="transition-colors hover:border-primary/40" title={hint}>
       <CardContent className="flex items-center gap-4 p-4">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
           <Icon className="size-5" />
@@ -34,8 +54,11 @@ function StatCard({ label, value, icon: Icon, to }: { label: string; value: numb
 export function DashboardPage() {
   const { data: documentList, isLoading } = useDocumentList({ limit: 20 })
   const { data: needsReviewCount } = useDocumentList({ needs_review: true, limit: 1 })
+  const { data: completedCount } = useDocumentList({ status: 'completed', limit: 1 })
   const { data: reviewQueue } = useReviewQueue()
   const { data: typeSuggestions } = useTypeSuggestions()
+
+  const timeSavedMinutes = (completedCount?.total ?? 0) * ASSUMED_MINUTES_PER_DOCUMENT
 
   const recentDocuments = (documentList?.documents ?? []).filter((doc) => doc.status !== 'segmented').slice(0, 10)
 
@@ -53,11 +76,17 @@ export function DashboardPage() {
         <p className="text-muted-foreground">Aquí tienes un resumen de tu plataforma documental.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <StatCard label="Documentos" value={documentList?.total ?? '—'} icon={FileText} />
         <StatCard label="Necesitan revisión" value={needsReviewCount?.total ?? '—'} icon={ClipboardCheck} to="/review" />
         <StatCard label="Revisiones pendientes" value={reviewQueue?.length ?? '—'} icon={ClipboardCheck} to="/review" />
         <StatCard label="Sugerencias de tipo" value={typeSuggestions?.length ?? '—'} icon={Sparkles} to="/type-suggestions" />
+        <StatCard
+          label="Tiempo ahorrado (estimado)"
+          value={completedCount ? formatHours(timeSavedMinutes) : '—'}
+          icon={Clock}
+          hint={`Asume ${ASSUMED_MINUTES_PER_DOCUMENT} min/documento manual (VITE_ASSUMED_MINUTES_PER_DOCUMENT) × ${completedCount?.total ?? 0} documentos completados`}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
