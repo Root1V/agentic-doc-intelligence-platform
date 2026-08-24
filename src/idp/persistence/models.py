@@ -26,13 +26,13 @@ def _uuid_pk() -> Mapped[uuid.UUID]:
 
 
 class User(Base):
-    """A reviewer's login identity. No roles/permissions yet — every user
-    can do everything (review, resolve type suggestions) — RBAC is
-    deliberately deferred until more than one work profile actually
-    exists. Replaces the static ``x-api-key`` this platform used before the
-    frontend module: ``reviewer_identity`` on review/type-suggestion
-    actions is now derived server-side from the authenticated user instead
-    of trusted from the request body."""
+    """A reviewer's login identity. ``role`` is one of "admin" (also manages
+    users), "operador" (can execute actions: upload, correct, accept/reject
+    type suggestions) or "visor" (read-only) — see ``api/deps.require_role``
+    for enforcement. Replaces the static ``x-api-key`` this platform used
+    before the frontend module: ``reviewer_identity`` on review/type-suggestion
+    actions is derived server-side from the authenticated user instead of
+    trusted from the request body."""
 
     __tablename__ = "users"
 
@@ -40,6 +40,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     email: Mapped[str] = mapped_column(String(256), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    role: Mapped[str] = mapped_column(String(16), default="operador", server_default="operador", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

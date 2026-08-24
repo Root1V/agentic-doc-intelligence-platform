@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from idp.api.deps import get_current_user, get_db_session
+from idp.api.deps import get_current_user, get_db_session, require_role
 from idp.persistence.models import User
 from idp.persistence.repositories import ReviewRepository
 
@@ -57,7 +57,7 @@ async def list_pending_review(session: AsyncSession = Depends(get_db_session)) -
     ]
 
 
-@router.post("/{review_item_id}", response_model=ReviewCorrectionResponse)
+@router.post("/{review_item_id}", response_model=ReviewCorrectionResponse, dependencies=[Depends(require_role("operador", "admin"))])
 async def submit_correction(
     review_item_id: uuid.UUID,
     body: ReviewCorrectionRequest,

@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from idp.api.deps import get_current_user, get_db_session
+from idp.api.deps import get_current_user, get_db_session, require_role
 from idp.persistence.models import DocumentTypeSuggestion, User
 from idp.persistence.repositories import TypeSuggestionRepository
 
@@ -71,7 +71,7 @@ async def _resolve(suggestion_id: uuid.UUID, decision: str, reviewer_identity: s
     return _to_response(row)
 
 
-@router.post("/{suggestion_id}/accept", response_model=TypeSuggestionResponse)
+@router.post("/{suggestion_id}/accept", response_model=TypeSuggestionResponse, dependencies=[Depends(require_role("operador", "admin"))])
 async def accept_suggestion(
     suggestion_id: uuid.UUID,
     session: AsyncSession = Depends(get_db_session),
@@ -80,7 +80,7 @@ async def accept_suggestion(
     return await _resolve(suggestion_id, "accepted", current_user.name, session)
 
 
-@router.post("/{suggestion_id}/reject", response_model=TypeSuggestionResponse)
+@router.post("/{suggestion_id}/reject", response_model=TypeSuggestionResponse, dependencies=[Depends(require_role("operador", "admin"))])
 async def reject_suggestion(
     suggestion_id: uuid.UUID,
     session: AsyncSession = Depends(get_db_session),

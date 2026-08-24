@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
+import { RequireRole } from '@/components/layout/RequireRole'
 import { LoginPage } from '@/pages/Login'
 import { DashboardPage } from '@/pages/Dashboard'
 import { UploadPage } from '@/pages/Upload'
@@ -10,6 +11,7 @@ import { TypeSuggestionsPage } from '@/pages/TypeSuggestions'
 import { DocumentTypesPage } from '@/pages/DocumentTypes'
 import { AuditPage } from '@/pages/Audit'
 import { DocumentsPage } from '@/pages/Documents'
+import { UsersPage } from '@/pages/Users'
 
 export default function App() {
   return (
@@ -27,7 +29,9 @@ export default function App() {
         path="/upload"
         element={
           <ProtectedRoute>
-            <UploadPage />
+            <RequireRole roles={['operador', 'admin']}>
+              <UploadPage />
+            </RequireRole>
           </ProtectedRoute>
         }
       />
@@ -84,6 +88,16 @@ export default function App() {
         element={
           <ProtectedRoute>
             <AuditPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute>
+            <RequireRole roles={['admin']}>
+              <UsersPage />
+            </RequireRole>
           </ProtectedRoute>
         }
       />

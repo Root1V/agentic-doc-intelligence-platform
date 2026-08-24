@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useReviewQueue, useSubmitCorrection } from '@/lib/queries'
 import { humanizeFieldName } from '@/lib/extraction'
+import { canExecute } from '@/lib/auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -19,6 +20,7 @@ function ReviewRow({ item }: { item: ReviewItem }) {
   const submitCorrection = useSubmitCorrection()
   const [correcting, setCorrecting] = useState(false)
   const [value, setValue] = useState(String(item.current_value.value ?? ''))
+  const canCorrect = canExecute()
 
   function handleSubmit() {
     submitCorrection.mutate(
@@ -48,9 +50,11 @@ function ReviewRow({ item }: { item: ReviewItem }) {
         {!correcting ? (
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted-foreground">Valor actual: {String(item.current_value.value ?? '—')}</span>
-            <Button size="sm" variant="outline" onClick={() => setCorrecting(true)}>
-              Corregir
-            </Button>
+            {canCorrect && (
+              <Button size="sm" variant="outline" onClick={() => setCorrecting(true)}>
+                Corregir
+              </Button>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-2">

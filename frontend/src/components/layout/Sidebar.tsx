@@ -1,20 +1,30 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Upload, Files, ClipboardCheck, Sparkles, BookOpen, History, LogOut, FileStack } from 'lucide-react'
+import { LayoutDashboard, Upload, Files, ClipboardCheck, Sparkles, BookOpen, History, LogOut, FileStack, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { clearSession, getUserName } from '@/lib/auth'
+import { canExecute, clearSession, getUserName, getUserRole, isAdmin } from '@/lib/auth'
+import { Badge } from '@/components/ui/badge'
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: 'Admin',
+  operador: 'Operador',
+  visor: 'Visor',
+}
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Inicio', icon: LayoutDashboard, end: true },
-  { to: '/upload', label: 'Subir documentos', icon: Upload },
-  { to: '/documents', label: 'Documentos', icon: Files },
-  { to: '/review', label: 'Cola de revisión', icon: ClipboardCheck },
-  { to: '/type-suggestions', label: 'Sugerencias de tipo', icon: Sparkles },
-  { to: '/document-types', label: 'Plantillas', icon: BookOpen },
-  { to: '/audit', label: 'Auditoría', icon: History },
+  { to: '/', label: 'Inicio', icon: LayoutDashboard, end: true, requiresExecute: false },
+  { to: '/upload', label: 'Subir documentos', icon: Upload, requiresExecute: true },
+  { to: '/documents', label: 'Documentos', icon: Files, requiresExecute: false },
+  { to: '/review', label: 'Cola de revisión', icon: ClipboardCheck, requiresExecute: false },
+  { to: '/type-suggestions', label: 'Sugerencias de tipo', icon: Sparkles, requiresExecute: false },
+  { to: '/document-types', label: 'Plantillas', icon: BookOpen, requiresExecute: false },
+  { to: '/audit', label: 'Auditoría', icon: History, requiresExecute: false },
 ]
 
 export function Sidebar() {
   const userName = getUserName()
+  const role = getUserRole()
+  const executeAllowed = canExecute()
+  const navItems = executeAllowed ? NAV_ITEMS : NAV_ITEMS.filter((item) => !item.requiresExecute)
 
   return (
     <aside className="flex h-svh w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
@@ -29,7 +39,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-3">
-        {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+        {navItems.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -47,10 +57,33 @@ export function Sidebar() {
             {label}
           </NavLink>
         ))}
+        {isAdmin() && (
+          <NavLink
+            to="/users"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                  : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              )
+            }
+          >
+            <Users className="size-4" />
+            Usuarios
+          </NavLink>
+        )}
       </nav>
 
       <div className="border-t px-3 py-4">
-        <div className="mb-2 px-2 text-sm font-medium">{userName ?? 'Usuario'}</div>
+        <div className="mb-2 flex items-center gap-2 px-2">
+          <span className="text-sm font-medium">{userName ?? 'Usuario'}</span>
+          {role && (
+            <Badge variant="outline" className="text-[10px]">
+              {ROLE_LABEL[role] ?? role}
+            </Badge>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => {

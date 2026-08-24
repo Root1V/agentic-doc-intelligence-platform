@@ -10,7 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from idp.api.deps import get_app_settings, get_current_user, get_db_session, get_object_store
+from idp.api.deps import get_app_settings, get_current_user, get_db_session, get_object_store, require_role
 from idp.api.schemas import DocumentSummary
 from idp.config import Settings
 from idp.persistence.repositories import BatchRepository, DocumentRepository
@@ -30,7 +30,7 @@ class BatchCreateResponse(BaseModel):
     batch_id: uuid.UUID
 
 
-@router.post("", response_model=BatchCreateResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=BatchCreateResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role("operador", "admin"))])
 async def create_batch(
     background_tasks: BackgroundTasks,
     files: Annotated[list[UploadFile], File(...)],

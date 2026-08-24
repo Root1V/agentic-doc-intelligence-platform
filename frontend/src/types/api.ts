@@ -165,8 +165,25 @@ export interface LoginRequest {
   password: string
 }
 
+export type UserRole = 'admin' | 'operador' | 'visor'
+
 export interface LoginResponse {
   access_token: string
   token_type: string
   user_name: string
+  role: UserRole
+}
+
+export interface AppUser {
+  id: string
+  name: string
+  email: string
+  role: UserRole
+}
+
+export interface CreateUserRequest {
+  name: string
+  email: string
+  password: string
+  role: UserRole
 }

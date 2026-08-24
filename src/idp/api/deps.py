@@ -58,3 +58,16 @@ async def get_current_user(
     if user is None:
         raise unauthorized
     return user
+
+
+def require_role(*allowed_roles: str):
+    """Route-level dependency, additive to ``get_current_user`` — the role
+    is re-read from the DB on every request (not cached in the JWT), so a
+    role change takes effect on a user's next call, not their next login."""
+
+    async def checker(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+        if current_user.role not in allowed_roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="insufficient permissions")
+        return current_user
+
+    return checker

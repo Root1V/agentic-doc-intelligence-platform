@@ -36,11 +36,15 @@ class UserRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def create(self, *, name: str, email: str, password_hash: str) -> User:
-        user = User(name=name, email=email, password_hash=password_hash)
+    async def create(self, *, name: str, email: str, password_hash: str, role: str = "operador") -> User:
+        user = User(name=name, email=email, password_hash=password_hash, role=role)
         self._session.add(user)
         await self._session.flush()
         return user
+
+    async def list(self) -> list[User]:
+        result = await self._session.execute(select(User).order_by(User.created_at))
+        return list(result.scalars().all())
 
 
 class BatchRepository:

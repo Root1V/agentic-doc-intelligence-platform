@@ -25,6 +25,7 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user_name: str
+    role: str
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -37,4 +38,4 @@ async def login(
     if user is None or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid email or password")
     token = create_access_token(settings, user_id=user.id)
-    return LoginResponse(access_token=token, user_name=user.name)
+    return LoginResponse(access_token=token, user_name=user.name, role=user.role)

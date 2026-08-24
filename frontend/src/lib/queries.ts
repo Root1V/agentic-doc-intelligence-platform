@@ -5,9 +5,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/apiClient'
 import type {
+  AppUser,
   AuditLogResponse,
   BatchCreateResponse,
   BatchStatusResponse,
+  CreateUserRequest,
   DocumentDetailResponse,
   DocumentListResponse,
   DocumentTypeCatalogResponse,
@@ -163,6 +165,29 @@ export function useAuditLog(params: { limit?: number; offset?: number } = {}) {
     queryFn: async () => {
       const { data } = await apiClient.get<AuditLogResponse>('/audit', { params })
       return data
+    },
+  })
+}
+
+export function useUsers() {
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<AppUser[]>('/users')
+      return data
+    },
+  })
+}
+
+export function useCreateUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: CreateUserRequest) => {
+      const { data } = await apiClient.post<AppUser>('/users', body)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
     },
   })
 }

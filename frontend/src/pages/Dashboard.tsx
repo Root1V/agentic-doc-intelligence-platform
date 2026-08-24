@@ -4,7 +4,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { useDocumentList, useReviewQueue, useTypeSuggestions } from '@/lib/queries'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { getUserName } from '@/lib/auth'
+import { canExecute, getUserName } from '@/lib/auth'
 
 const CHART_COLORS = ['#7c3aed', '#a78bfa', '#c4b5fd', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#6b7280']
 
@@ -93,10 +93,12 @@ export function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Documentos recientes</CardTitle>
-            <Link to="/upload" className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
-              <Upload className="size-3.5" />
-              Subir documentos
-            </Link>
+            {canExecute() && (
+              <Link to="/upload" className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+                <Upload className="size-3.5" />
+                Subir documentos
+              </Link>
+            )}
           </CardHeader>
           <CardContent>
             {isLoading ? (

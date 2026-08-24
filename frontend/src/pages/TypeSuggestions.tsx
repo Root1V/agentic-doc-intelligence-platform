@@ -1,6 +1,7 @@
 import { Loader2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { useResolveTypeSuggestion, useTypeSuggestions } from '@/lib/queries'
+import { canExecute } from '@/lib/auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 export function TypeSuggestionsPage() {
   const { data: suggestions, isLoading } = useTypeSuggestions()
   const resolve = useResolveTypeSuggestion()
+  const canResolve = canExecute()
 
   function handle(suggestionId: string, decision: 'accept' | 'reject') {
     resolve.mutate(
@@ -73,14 +75,16 @@ export function TypeSuggestionsPage() {
                     </TableBody>
                   </Table>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" disabled={resolve.isPending} onClick={() => handle(suggestion.id, 'accept')}>
-                    Aceptar
-                  </Button>
-                  <Button size="sm" variant="outline" disabled={resolve.isPending} onClick={() => handle(suggestion.id, 'reject')}>
-                    Rechazar
-                  </Button>
-                </div>
+                {canResolve && (
+                  <div className="flex gap-2">
+                    <Button size="sm" disabled={resolve.isPending} onClick={() => handle(suggestion.id, 'accept')}>
+                      Aceptar
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={resolve.isPending} onClick={() => handle(suggestion.id, 'reject')}>
+                      Rechazar
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

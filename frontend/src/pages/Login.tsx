@@ -26,7 +26,7 @@ export function LoginPage() {
       { email, password },
       {
         onSuccess: (data) => {
-          setSession(data.access_token, data.user_name)
+          setSession(data.access_token, data.user_name, data.role)
           navigate('/', { replace: true })
         },
         onError: () => setError('Correo o contraseña inválidos.'),

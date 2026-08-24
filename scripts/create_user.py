@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 """Creates a login user for the frontend — no self-signup (internal tool).
-Run: ``uv run python scripts/create_user.py --name "Victor Espiritu" --email victor@example.com --password secret123``
+Once at least one "admin" user exists, further users can also be created
+from the "Usuarios" page in the UI — this script remains the way to
+bootstrap that first admin.
+Run: ``uv run python scripts/create_user.py --name "Victor Espiritu" --email victor@example.com --password secret123 --role admin``
 """
 
 from __future__ import annotations
@@ -13,8 +16,10 @@ from idp.config import get_settings
 from idp.persistence.db import get_session_factory
 from idp.persistence.repositories import UserRepository
 
+ROLES = {"admin", "operador", "visor"}
 
-async def run(name: str, email: str, password: str) -> None:
+
+async def run(name: str, email: str, password: str, role: str) -> None:
     settings = get_settings()
     factory = get_session_factory(settings)
     async with factory() as session:
@@ -23,9 +28,9 @@ async def run(name: str, email: str, password: str) -> None:
         if existing is not None:
             print(f"User already exists: {email}")
             return
-        await repo.create(name=name, email=email, password_hash=hash_password(password))
+        await repo.create(name=name, email=email, password_hash=hash_password(password), role=role)
         await session.commit()
-    print(f"Created user: {name} <{email}>")
+    print(f"Created user: {name} <{email}> ({role})")
 
 
 if __name__ == "__main__":
@@ -33,5 +38,6 @@ if __name__ == "__main__":
     parser.add_argument("--name", required=True)
     parser.add_argument("--email", required=True)
     parser.add_argument("--password", required=True)
+    parser.add_argument("--role", default="operador", choices=sorted(ROLES))
     args = parser.parse_args()
-    asyncio.run(run(args.name, args.email, args.password))
+    asyncio.run(run(args.name, args.email, args.password, args.role))
