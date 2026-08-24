@@ -340,6 +340,29 @@ class TypeSuggestionRepository:
         await self._session.flush()
         return row
 
+    async def update(
+        self,
+        suggestion_id: uuid.UUID,
+        *,
+        suggested_type_name: str | None = None,
+        suggested_display_name: str | None = None,
+        fields: list[dict] | None = None,
+    ) -> DocumentTypeSuggestion:
+        """Refines a still-pending proposal (rename/retype/add/remove
+        fields) before a human decides accept/reject — never touches a
+        type already registered in code, see api/routes/type_suggestions.py."""
+        row = await self._session.get(DocumentTypeSuggestion, suggestion_id)
+        if row is None:
+            raise ValueError(f"type suggestion not found: {suggestion_id}")
+        if suggested_type_name is not None:
+            row.suggested_type_name = suggested_type_name
+        if suggested_display_name is not None:
+            row.suggested_display_name = suggested_display_name
+        if fields is not None:
+            row.fields = fields
+        await self._session.flush()
+        return row
+
 
 class ReferenceDataRepository:
     """Postgres-backed adapter of ``ReferenceDataPort`` (category d)."""

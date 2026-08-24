@@ -19,6 +19,7 @@ import type {
   ReviewCorrectionResponse,
   ReviewItem,
   TypeSuggestion,
+  UpdateTypeSuggestionRequest,
 } from '@/types/api'
 
 const TERMINAL_BATCH_STATUSES = new Set(['completed'])
@@ -209,6 +210,19 @@ export function useResolveTypeSuggestion() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['type-suggestions'] })
       queryClient.invalidateQueries({ queryKey: ['document-types'] })
+    },
+  })
+}
+
+export function useUpdateTypeSuggestion() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ suggestionId, body }: { suggestionId: string; body: UpdateTypeSuggestionRequest }) => {
+      const { data } = await apiClient.patch<TypeSuggestion>(`/type-suggestions/${suggestionId}`, body)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['type-suggestions'] })
     },
   })
 }

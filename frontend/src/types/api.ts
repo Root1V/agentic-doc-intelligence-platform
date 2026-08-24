@@ -116,6 +116,16 @@ export interface TypeSuggestion {
   reviewer_identity: string | null
 }
 
+export type SuggestedFieldType = 'str' | 'int' | 'float' | 'bool' | 'list'
+
+/** Only editable while the suggestion is still "pending" — see PATCH
+ * /type-suggestions/{id}. */
+export interface UpdateTypeSuggestionRequest {
+  suggested_type_name?: string
+  suggested_display_name?: string
+  fields?: { name: string; field_type: SuggestedFieldType; description: string; required: boolean }[]
+}
+
 export interface DocumentTypeFieldInfo {
   name: string
   field_type: string
