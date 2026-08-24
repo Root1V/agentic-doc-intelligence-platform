@@ -23,17 +23,38 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from idp.api.app import create_app
+from idp.auth.security import hash_password
+from idp.persistence.db import get_session_factory
+from idp.persistence.repositories import UserRepository
 from idp.storage.object_store import S3ObjectStore
 from tests.conftest import FIXTURES_DIR, GOLDEN_DIR, normalize_extracted_string
 
 pytestmark = [pytest.mark.usefixtures("require_postgres", "require_minio", "require_reasoning_llm")]
 
+_TEST_USER_EMAIL = "test-runner@example.com"
+_TEST_USER_PASSWORD = "test-runner-password"
+
+
+async def _ensure_test_user(live_settings) -> None:
+    factory = get_session_factory(live_settings)
+    async with factory() as session:
+        repo = UserRepository(session)
+        if await repo.get_by_email(_TEST_USER_EMAIL) is None:
+            await repo.create(name="Test Runner", email=_TEST_USER_EMAIL, password_hash=hash_password(_TEST_USER_PASSWORD))
+            await session.commit()
+
 
 @pytest.mark.asyncio
 async def test_upload_batch_and_retrieve_extraction(live_settings):
     S3ObjectStore(live_settings).ensure_bucket()
+    await _ensure_test_user(live_settings)
     app = create_app()
-    headers = {"x-api-key": live_settings.api_key}
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", timeout=30.0) as auth_client:
+        login_resp = await auth_client.post("/auth/login", json={"email": _TEST_USER_EMAIL, "password": _TEST_USER_PASSWORD})
+        assert login_resp.status_code == 200, login_resp.text
+        token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
     # ASGITransport awaits the whole ASGI call including BackgroundTasks
     # before returning, so POST /batches itself blocks until the pipeline

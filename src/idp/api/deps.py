@@ -6,14 +6,19 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from idp.auth.security import decode_access_token
 from idp.config import Settings, get_settings
 from idp.persistence.db import get_session_factory
-from idp.persistence.repositories import ReferenceDataRepository
+from idp.persistence.models import User
+from idp.persistence.repositories import ReferenceDataRepository, UserRepository
 from idp.storage.object_store import S3ObjectStore
 from idp.validation.ports import ExternalSystemPort, ReferenceDataPort, StubExternalSystemPort
+
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_app_settings() -> Settings:
@@ -38,9 +43,18 @@ def get_external_system_port(settings: Annotated[Settings, Depends(get_app_setti
     return StubExternalSystemPort()
 
 
-async def require_api_key(
+async def get_current_user(
     settings: Annotated[Settings, Depends(get_app_settings)],
-    x_api_key: Annotated[str | None, Header()] = None,
-) -> None:
-    if x_api_key != settings.api_key:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid API key")
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)] = None,
+) -> User:
+    unauthorized = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid or missing credentials")
+    if credentials is None:
+        raise unauthorized
+    user_id = decode_access_token(settings, credentials.credentials)
+    if user_id is None:
+        raise unauthorized
+    user = await UserRepository(session).get(user_id)
+    if user is None:
+        raise unauthorized
+    return user

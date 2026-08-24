@@ -10,25 +10,14 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from idp.api.deps import get_app_settings, get_db_session, get_object_store, require_api_key
+from idp.api.deps import get_app_settings, get_current_user, get_db_session, get_object_store
+from idp.api.schemas import DocumentSummary
 from idp.config import Settings
 from idp.persistence.repositories import BatchRepository, DocumentRepository
 from idp.storage.object_store import S3ObjectStore
 from idp.worker.tasks import run_batch
 
-router = APIRouter(prefix="/batches", tags=["batches"], dependencies=[Depends(require_api_key)])
-
-
-class DocumentSummary(BaseModel):
-    id: uuid.UUID
-    status: str
-    document_type: str | None
-    classification_confidence: float | None
-    needs_review: bool
-    original_filename: str
-    parent_document_id: uuid.UUID | None
-    page_start: int | None
-    page_end: int | None
+router = APIRouter(prefix="/batches", tags=["batches"], dependencies=[Depends(get_current_user)])
 
 
 class BatchStatusResponse(BaseModel):
@@ -83,6 +72,7 @@ async def get_batch(batch_id: uuid.UUID, session: AsyncSession = Depends(get_db_
         documents=[
             DocumentSummary(
                 id=doc.id,
+                batch_id=doc.batch_id,
                 status=doc.status,
                 document_type=doc.document_type,
                 classification_confidence=doc.classification_confidence,

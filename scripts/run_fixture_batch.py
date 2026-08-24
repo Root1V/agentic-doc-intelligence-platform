@@ -4,8 +4,9 @@ and diffs the extracted values against the golden files — the command to run
 after any pipeline change to confirm Fase 0 still works end-to-end.
 
 Requires the API running (``uvicorn idp.api.app:app``) with Postgres/MinIO up
-(``docker compose up -d``) and a reachable LLM/VLM endpoint (e.g. Prometheus).
-Run: ``uv run python scripts/run_fixture_batch.py [--base-url http://localhost:8000]``
+(``docker compose up -d``) and a reachable LLM/VLM endpoint (e.g. Prometheus),
+plus a login user created via ``scripts/create_user.py``.
+Run: ``uv run python scripts/run_fixture_batch.py --email you@example.com --password ... [--base-url http://localhost:8000]``
 """
 
 from __future__ import annotations
@@ -39,8 +40,15 @@ def _diff_fields(expected_fields: dict, extraction_payload: dict) -> list[tuple[
     return rows
 
 
-def run(base_url: str, api_key: str, timeout_s: float = 300.0) -> int:
-    client = httpx.Client(base_url=base_url, headers={"x-api-key": api_key}, timeout=30.0)
+def _login(base_url: str, email: str, password: str) -> str:
+    resp = httpx.post(f"{base_url}/auth/login", json={"email": email, "password": password}, timeout=30.0)
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+
+def run(base_url: str, email: str, password: str, timeout_s: float = 300.0) -> int:
+    token = _login(base_url, email, password)
+    client = httpx.Client(base_url=base_url, headers={"Authorization": f"Bearer {token}"}, timeout=30.0)
     exit_code = 0
 
     for image_path in sorted(FIXTURES_DIR.glob("*.png")):
@@ -98,6 +106,7 @@ def run(base_url: str, api_key: str, timeout_s: float = 300.0) -> int:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default="http://localhost:8000")
-    parser.add_argument("--api-key", default="dev-local-api-key")
+    parser.add_argument("--email", required=True, help="login user created via scripts/create_user.py")
+    parser.add_argument("--password", required=True)
     args = parser.parse_args()
-    sys.exit(run(args.base_url, args.api_key))
+    sys.exit(run(args.base_url, args.email, args.password))

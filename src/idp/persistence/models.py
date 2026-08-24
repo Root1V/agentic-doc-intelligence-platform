@@ -25,6 +25,24 @@ def _uuid_pk() -> Mapped[uuid.UUID]:
     return mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
 
+class User(Base):
+    """A reviewer's login identity. No roles/permissions yet — every user
+    can do everything (review, resolve type suggestions) — RBAC is
+    deliberately deferred until more than one work profile actually
+    exists. Replaces the static ``x-api-key`` this platform used before the
+    frontend module: ``reviewer_identity`` on review/type-suggestion
+    actions is now derived server-side from the authenticated user instead
+    of trusted from the request body."""
+
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    email: Mapped[str] = mapped_column(String(256), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Batch(Base):
     """Aggregate root: a 'solicitud' grouping one or more documents plus an
     optional externally-supplied input payload."""

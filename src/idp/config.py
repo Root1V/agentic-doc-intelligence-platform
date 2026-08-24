@@ -20,8 +20,18 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # --- API ---
-    api_key: str = "dev-local-api-key"
     environment: Literal["dev", "test", "prod"] = "dev"
+
+    # --- Auth (JWT) ---
+    # HS256 shared-secret signing — adequate for a single-backend internal
+    # tool; move to asymmetric keys only if a second service ever needs to
+    # verify tokens independently.
+    jwt_secret_key: str = "dev-insecure-change-me"
+    jwt_algorithm: str = "HS256"
+    jwt_expiration_minutes: int = 480  # 8h — one work shift
+
+    # --- CORS (frontend dev server origin) ---
+    cors_allowed_origins: list[str] = ["http://localhost:5180"]
 
     # --- Database ---
     database_url: str = "postgresql+asyncpg://idp:idp@localhost:5433/idp"

@@ -7,7 +7,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -19,8 +19,28 @@ from idp.persistence.models import (
     Extraction,
     ReferenceEmployee,
     ReviewItem,
+    User,
     ValidationIssue,
 )
+
+
+class UserRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get(self, user_id: uuid.UUID) -> User | None:
+        return await self._session.get(User, user_id)
+
+    async def get_by_email(self, email: str) -> User | None:
+        stmt = select(User).where(User.email == email)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def create(self, *, name: str, email: str, password_hash: str) -> User:
+        user = User(name=name, email=email, password_hash=password_hash)
+        self._session.add(user)
+        await self._session.flush()
+        return user
 
 
 class BatchRepository:
@@ -108,6 +128,38 @@ class DocumentRepository:
         stmt = select(Document).where(Document.batch_id == batch_id).options(selectinload(Document.extraction))
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    @staticmethod
+    def _filtered(stmt, *, status: str | None, document_type: str | None, needs_review: bool | None):
+        if status is not None:
+            stmt = stmt.where(Document.status == status)
+        if document_type is not None:
+            stmt = stmt.where(Document.document_type == document_type)
+        if needs_review is not None:
+            stmt = stmt.where(Document.needs_review == needs_review)
+        return stmt
+
+    async def list(
+        self,
+        *,
+        status: str | None = None,
+        document_type: str | None = None,
+        needs_review: bool | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Document]:
+        stmt = select(Document).order_by(Document.created_at.desc()).limit(limit).offset(offset)
+        stmt = self._filtered(stmt, status=status, document_type=document_type, needs_review=needs_review)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def count(
+        self, *, status: str | None = None, document_type: str | None = None, needs_review: bool | None = None
+    ) -> int:
+        stmt = select(func.count()).select_from(Document)
+        stmt = self._filtered(stmt, status=status, document_type=document_type, needs_review=needs_review)
+        result = await self._session.execute(stmt)
+        return result.scalar_one()
 
     async def set_classification(self, document_id: uuid.UUID, *, document_type: str, confidence: float, reasoning: str, needs_review: bool) -> None:
         doc = await self._session.get(Document, document_id)
@@ -227,7 +279,10 @@ class TypeSuggestionRepository:
         return row
 
     async def list_pending(self) -> list[DocumentTypeSuggestion]:
-        stmt = select(DocumentTypeSuggestion).where(DocumentTypeSuggestion.status == "pending")
+        return await self.list_by_status("pending")
+
+    async def list_by_status(self, status: str) -> list[DocumentTypeSuggestion]:
+        stmt = select(DocumentTypeSuggestion).where(DocumentTypeSuggestion.status == status)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 

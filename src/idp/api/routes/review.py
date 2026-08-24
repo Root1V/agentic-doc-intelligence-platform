@@ -11,10 +11,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from idp.api.deps import get_db_session, require_api_key
+from idp.api.deps import get_current_user, get_db_session
+from idp.persistence.models import User
 from idp.persistence.repositories import ReviewRepository
 
-router = APIRouter(prefix="/review", tags=["review"], dependencies=[Depends(require_api_key)])
+router = APIRouter(prefix="/review", tags=["review"], dependencies=[Depends(get_current_user)])
 
 
 class ReviewItemResponse(BaseModel):
@@ -28,7 +29,6 @@ class ReviewItemResponse(BaseModel):
 
 
 class ReviewCorrectionRequest(BaseModel):
-    reviewer_identity: str
     corrected_value: Any
     model_version: str | None = None
     prompt_version: str | None = None
@@ -62,6 +62,7 @@ async def submit_correction(
     review_item_id: uuid.UUID,
     body: ReviewCorrectionRequest,
     session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
 ) -> ReviewCorrectionResponse:
     repo = ReviewRepository(session)
     item = await repo.get(review_item_id)
@@ -70,7 +71,7 @@ async def submit_correction(
 
     await repo.resolve(
         review_item_id,
-        reviewer_identity=body.reviewer_identity,
+        reviewer_identity=current_user.name,
         corrected_value={"value": body.corrected_value},
         model_version=body.model_version,
         prompt_version=body.prompt_version,

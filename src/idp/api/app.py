@@ -6,10 +6,11 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from opentelemetry import trace
 
-from idp.api.routes import batches, documents, review, type_suggestions
+from idp.api.routes import auth, batches, document_types, documents, review, type_suggestions
 from idp.config import get_settings
 from idp.observability.otel import setup_tracing
 from idp.storage.object_store import S3ObjectStore
@@ -29,8 +30,17 @@ def create_app() -> FastAPI:
         trace.get_tracer_provider().shutdown()  # type: ignore[union-attr]
 
     app = FastAPI(title="Intelligent Document Platform", version="0.2.0", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_allowed_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+    app.include_router(auth.router)
     app.include_router(batches.router)
     app.include_router(documents.router)
+    app.include_router(document_types.router)
     app.include_router(review.router)
     app.include_router(type_suggestions.router)
 

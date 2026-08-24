@@ -14,11 +14,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from idp.api.deps import get_db_session, require_api_key
-from idp.persistence.models import DocumentTypeSuggestion
+from idp.api.deps import get_current_user, get_db_session
+from idp.persistence.models import DocumentTypeSuggestion, User
 from idp.persistence.repositories import TypeSuggestionRepository
 
-router = APIRouter(prefix="/type-suggestions", tags=["type-suggestions"], dependencies=[Depends(require_api_key)])
+router = APIRouter(prefix="/type-suggestions", tags=["type-suggestions"], dependencies=[Depends(get_current_user)])
 
 
 class SuggestedFieldResponse(BaseModel):
@@ -38,10 +38,6 @@ class TypeSuggestionResponse(BaseModel):
     fields: list[dict]
     status: str
     reviewer_identity: str | None
-
-
-class ReviewDecisionRequest(BaseModel):
-    reviewer_identity: str
 
 
 def _to_response(row: DocumentTypeSuggestion) -> TypeSuggestionResponse:
@@ -77,13 +73,17 @@ async def _resolve(suggestion_id: uuid.UUID, decision: str, reviewer_identity: s
 
 @router.post("/{suggestion_id}/accept", response_model=TypeSuggestionResponse)
 async def accept_suggestion(
-    suggestion_id: uuid.UUID, body: ReviewDecisionRequest, session: AsyncSession = Depends(get_db_session)
+    suggestion_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
 ) -> TypeSuggestionResponse:
-    return await _resolve(suggestion_id, "accepted", body.reviewer_identity, session)
+    return await _resolve(suggestion_id, "accepted", current_user.name, session)
 
 
 @router.post("/{suggestion_id}/reject", response_model=TypeSuggestionResponse)
 async def reject_suggestion(
-    suggestion_id: uuid.UUID, body: ReviewDecisionRequest, session: AsyncSession = Depends(get_db_session)
+    suggestion_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
 ) -> TypeSuggestionResponse:
-    return await _resolve(suggestion_id, "rejected", body.reviewer_identity, session)
+    return await _resolve(suggestion_id, "rejected", current_user.name, session)
