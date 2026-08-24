@@ -65,6 +65,12 @@ _TYPE_DESCRIPTIONS = {
         "financiado por un prestamo nuevo. Se distingue por una tabla 'DETALLE DE LA DEUDA A SUBROGAR' con "
         "filas de prestamos y tarjetas de credito — no tiene relacion con descuento por planilla."
     ),
+    DocumentType.DEBT_CAPACITY_CALCULATION: (
+        "salida de una calculadora interna de capacidad de endeudamiento ('Calculadora'/'Kontigo') — evalua "
+        "si un cliente califica para un credito nuevo dado su buro de riesgo, ingresos, descuentos y deuda "
+        "BBVA existente por producto (Tarjeta, CCONVPLAN, CPLD, etc.), con secciones numeradas de "
+        "ingresos/descuentos."
+    ),
     DocumentType.GENERIC: "cualquier otro documento que no encaje claramente en los tipos anteriores",
 }
 _TYPE_LIST = "\n".join(f"- {t.value}: {desc}" for t, desc in _TYPE_DESCRIPTIONS.items())

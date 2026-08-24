@@ -72,6 +72,7 @@ def build_default_rules(settings: Settings) -> list[ValidationRule]:
         DniFormatValid("credit_summary", "member_dni"),
         DniFormatValid("account_statement", "member_dni"),
         DniFormatValid("debt_subrogation_authorization", "client_dni"),
+        DniFormatValid("debt_capacity_calculation", "client_dni"),
         ExpectedEmployeeCodeMatches(),
         DuplicateDocumentIdentifier(),
         EmployeeNameCrossDocumentMatch(settings),

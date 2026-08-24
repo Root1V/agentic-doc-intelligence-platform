@@ -12,6 +12,7 @@ from idp.extraction import (  # noqa: F401
     account_statement,
     authorization_letter,
     credit_summary,
+    debt_capacity_calculation,
     debt_subrogation_authorization,
     email_correspondence,
     foreign_resident_id,

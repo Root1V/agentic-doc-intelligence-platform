@@ -79,6 +79,14 @@ _TYPE_HINTS: dict[DocumentType, str] = {
         "(entidad y monto), ignora las filas vacias de la plantilla. No lo confundas con authorization_letter "
         "(autorizacion de descuento por planilla), que no tiene esta tabla de deudas."
     ),
+    DocumentType.DEBT_CAPACITY_CALCULATION: (
+        "Es la salida de una calculadora interna de capacidad de endeudamiento ('Calculadora'/'Kontigo'): "
+        "evalua si un cliente califica para un credito nuevo dado su buro de riesgo, ingresos, descuentos y "
+        "deuda BBVA existente por producto. Tiene varias secciones numeradas de ingresos/descuentos "
+        "('Ingreso 1', 'Descuento 1', etc.) y una seccion de deuda existente por producto (Tarjeta, "
+        "CCONVPLAN, CPLD, etc.) — agrupalas en 'income_lines' y 'existing_debts' respectivamente, una "
+        "entrada por cada linea con datos reales."
+    ),
 }
 
 

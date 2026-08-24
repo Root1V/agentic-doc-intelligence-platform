@@ -21,4 +21,5 @@ class DocumentType(StrEnum):
     CREDIT_SUMMARY = "credit_summary"
     ACCOUNT_STATEMENT = "account_statement"
     DEBT_SUBROGATION_AUTHORIZATION = "debt_subrogation_authorization"
+    DEBT_CAPACITY_CALCULATION = "debt_capacity_calculation"
     GENERIC = "generic"
