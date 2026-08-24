@@ -54,13 +54,14 @@ async def list_documents(
     status_: Annotated[str | None, Query(alias="status")] = None,
     document_type: str | None = None,
     needs_review: bool | None = None,
+    q: str | None = None,
     limit: int = 50,
     offset: int = 0,
     session: AsyncSession = Depends(get_db_session),
 ) -> DocumentListResponse:
     repo = DocumentRepository(session)
-    documents = await repo.list(status=status_, document_type=document_type, needs_review=needs_review, limit=limit, offset=offset)
-    total = await repo.count(status=status_, document_type=document_type, needs_review=needs_review)
+    documents = await repo.list(status=status_, document_type=document_type, needs_review=needs_review, q=q, limit=limit, offset=offset)
+    total = await repo.count(status=status_, document_type=document_type, needs_review=needs_review, q=q)
     return DocumentListResponse(
         total=total,
         documents=[

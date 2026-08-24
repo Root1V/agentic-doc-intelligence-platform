@@ -7,7 +7,8 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import Text, func, or_, select
+from sqlalchemy import cast as sa_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -134,13 +135,25 @@ class DocumentRepository:
         return list(result.scalars().all())
 
     @staticmethod
-    def _filtered(stmt, *, status: str | None, document_type: str | None, needs_review: bool | None):
+    def _filtered(stmt, *, status: str | None, document_type: str | None, needs_review: bool | None, q: str | None):
         if status is not None:
             stmt = stmt.where(Document.status == status)
         if document_type is not None:
             stmt = stmt.where(Document.document_type == document_type)
         if needs_review is not None:
             stmt = stmt.where(Document.needs_review == needs_review)
+        if q:
+            # Extraction is 1:1 with Document (unique FK) so this outer join
+            # never duplicates rows. Casting the whole JSONB payload to text
+            # and substring-matching is crude (no relevance ranking, no
+            # index) but correct across all 12+ document type schemas
+            # without needing per-type field lists — fine at this corpus
+            # size; revisit with a tsvector/GIN index only if it's ever
+            # actually slow.
+            like = f"%{q}%"
+            stmt = stmt.outerjoin(Extraction, Extraction.document_id == Document.id).where(
+                or_(Document.original_filename.ilike(like), sa_cast(Extraction.payload, Text).ilike(like))
+            )
         return stmt
 
     async def list(
@@ -149,19 +162,25 @@ class DocumentRepository:
         status: str | None = None,
         document_type: str | None = None,
         needs_review: bool | None = None,
+        q: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Document]:
         stmt = select(Document).order_by(Document.created_at.desc()).limit(limit).offset(offset)
-        stmt = self._filtered(stmt, status=status, document_type=document_type, needs_review=needs_review)
+        stmt = self._filtered(stmt, status=status, document_type=document_type, needs_review=needs_review, q=q)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
     async def count(
-        self, *, status: str | None = None, document_type: str | None = None, needs_review: bool | None = None
+        self,
+        *,
+        status: str | None = None,
+        document_type: str | None = None,
+        needs_review: bool | None = None,
+        q: str | None = None,
     ) -> int:
         stmt = select(func.count()).select_from(Document)
-        stmt = self._filtered(stmt, status=status, document_type=document_type, needs_review=needs_review)
+        stmt = self._filtered(stmt, status=status, document_type=document_type, needs_review=needs_review, q=q)
         result = await self._session.execute(stmt)
         return result.scalar_one()
 

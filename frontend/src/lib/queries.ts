@@ -36,6 +36,9 @@ export interface DocumentListFilters {
   status?: string
   document_type?: string
   needs_review?: boolean
+  /** Matches against the filename AND the extracted field values (see
+   * DocumentRepository._filtered) — one box searches both. */
+  q?: string
   limit?: number
   offset?: number
 }

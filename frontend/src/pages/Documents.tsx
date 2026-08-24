@@ -4,14 +4,17 @@
 // type, or needs_review. No new backend work: GET /documents already
 // supports these filters, this page is the first UI that actually uses
 // them combined.
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, FileText, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, FileText, Loader2, Search } from 'lucide-react'
 import { useDocumentList, useDocumentTypeCatalog } from '@/lib/queries'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+const SEARCH_DEBOUNCE_MS = 400
 
 const STATUS_OPTIONS = [
   'uploaded',
@@ -38,13 +41,27 @@ export function DocumentsPage() {
   const [status, setStatus] = useState(ALL)
   const [documentType, setDocumentType] = useState(ALL)
   const [needsReview, setNeedsReview] = useState(ALL)
+  const [searchInput, setSearchInput] = useState('')
+  const [q, setQ] = useState('')
   const [offset, setOffset] = useState(0)
+
+  // Debounced separately from the other filters (which apply immediately on
+  // select) since this fires on every keystroke — waits for a pause before
+  // hitting the API instead of a request per character.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setQ(searchInput.trim())
+      setOffset(0)
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timeout)
+  }, [searchInput])
 
   const { data: catalog } = useDocumentTypeCatalog()
   const { data, isLoading, isFetching } = useDocumentList({
     status: status === ALL ? undefined : status,
     document_type: documentType === ALL ? undefined : documentType,
     needs_review: needsReview === ALL ? undefined : needsReview === 'true',
+    q: q || undefined,
     limit: PAGE_SIZE,
     offset,
   })
@@ -70,6 +87,16 @@ export function DocumentsPage() {
       </div>
 
       <div className="flex flex-wrap gap-3">
+        <div className="relative w-72">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre de archivo o contenido extraído..."
+            className="pl-8"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+        </div>
+
         <Select value={status} onValueChange={resetAndSet(setStatus)}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Estado" />
