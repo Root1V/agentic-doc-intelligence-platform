@@ -12,6 +12,7 @@ from idp.domain.document_types import DocumentType
 from idp.domain.schemas.account_statement import AccountStatementSchema
 from idp.domain.schemas.authorization_letter import AuthorizationLetterSchema
 from idp.domain.schemas.credit_summary import CreditSummarySchema
+from idp.domain.schemas.debt_subrogation_authorization import DebtSubrogationAuthorizationSchema
 from idp.domain.schemas.email_correspondence import EmailCorrespondenceSchema
 from idp.domain.schemas.foreign_resident_id import ForeignResidentIdSchema
 from idp.domain.schemas.generic import GenericSchema
@@ -32,6 +33,7 @@ SCHEMA_BY_DOCUMENT_TYPE: dict[DocumentType, type[BaseModel]] = {
     DocumentType.LOAN_PAYMENT_SCHEDULE: LoanPaymentScheduleSchema,
     DocumentType.CREDIT_SUMMARY: CreditSummarySchema,
     DocumentType.ACCOUNT_STATEMENT: AccountStatementSchema,
+    DocumentType.DEBT_SUBROGATION_AUTHORIZATION: DebtSubrogationAuthorizationSchema,
     DocumentType.GENERIC: GenericSchema,
 }
 

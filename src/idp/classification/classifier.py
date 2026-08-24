@@ -59,6 +59,12 @@ _TYPE_DESCRIPTIONS = {
         "'Estado de Cuenta' de un socio de una caja/cooperativa — identidad del socio, saldo de aportes, y "
         "saldo/avance del producto (credito o ahorro) principal."
     ),
+    DocumentType.DEBT_SUBROGATION_AUTHORIZATION: (
+        "'AUTORIZACION PARA LA SUBROGACION DE DEUDA DE OTROS BANCOS' — el cliente autoriza a un banco a "
+        "cancelar deudas (prestamos y/o tarjetas de credito) mantenidas en OTRAS entidades financieras, "
+        "financiado por un prestamo nuevo. Se distingue por una tabla 'DETALLE DE LA DEUDA A SUBROGAR' con "
+        "filas de prestamos y tarjetas de credito — no tiene relacion con descuento por planilla."
+    ),
     DocumentType.GENERIC: "cualquier otro documento que no encaje claramente en los tipos anteriores",
 }
 _TYPE_LIST = "\n".join(f"- {t.value}: {desc}" for t, desc in _TYPE_DESCRIPTIONS.items())

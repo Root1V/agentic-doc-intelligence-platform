@@ -71,6 +71,14 @@ _TYPE_HINTS: dict[DocumentType, str] = {
         "Es un 'Estado de Cuenta' de un socio de una caja/cooperativa: datos de identidad del socio, saldo "
         "de aportes, y el saldo/avance del producto (credito o ahorro) principal asociado."
     ),
+    DocumentType.DEBT_SUBROGATION_AUTHORIZATION: (
+        "Es una 'AUTORIZACION PARA LA SUBROGACION DE DEUDA DE OTROS BANCOS' — el cliente autoriza a un banco "
+        "a cancelar deudas (prestamos y/o tarjetas de credito) que mantiene en OTRAS entidades financieras, "
+        "financiado por un prestamo nuevo. Su contenido central es una tabla 'DETALLE DE LA DEUDA A "
+        "SUBROGAR' con filas de PRESTAMOS y de TARJETAS DE CREDITO — extrae SOLO las filas con datos reales "
+        "(entidad y monto), ignora las filas vacias de la plantilla. No lo confundas con authorization_letter "
+        "(autorizacion de descuento por planilla), que no tiene esta tabla de deudas."
+    ),
 }
 
 
