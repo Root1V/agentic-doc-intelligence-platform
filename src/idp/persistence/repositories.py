@@ -234,6 +234,56 @@ class ValidationRepository:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
+    @staticmethod
+    def _filtered(stmt, *, category: str | None, severity: str | None, rule_id: str | None, document_type: str | None):
+        if category is not None:
+            stmt = stmt.where(ValidationIssue.category == category)
+        if severity is not None:
+            stmt = stmt.where(ValidationIssue.severity == severity)
+        if rule_id is not None:
+            stmt = stmt.where(ValidationIssue.rule_id == rule_id)
+        if document_type is not None:
+            # Only ValidationIssue rows tied to a real document can match a
+            # document_type filter — no rows here are batch-only today, but
+            # the FK is nullable (see the model), so an inner join is
+            # correct: it's fine for this filter to exclude those.
+            stmt = stmt.join(Document, Document.id == ValidationIssue.document_id).where(Document.document_type == document_type)
+        return stmt
+
+    async def list(
+        self,
+        *,
+        category: str | None = None,
+        severity: str | None = None,
+        rule_id: str | None = None,
+        document_type: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[ValidationIssue]:
+        stmt = (
+            select(ValidationIssue)
+            .options(selectinload(ValidationIssue.document))
+            .order_by(ValidationIssue.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        stmt = self._filtered(stmt, category=category, severity=severity, rule_id=rule_id, document_type=document_type)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def count(
+        self,
+        *,
+        category: str | None = None,
+        severity: str | None = None,
+        rule_id: str | None = None,
+        document_type: str | None = None,
+    ) -> int:
+        stmt = select(func.count()).select_from(ValidationIssue)
+        stmt = self._filtered(stmt, category=category, severity=severity, rule_id=rule_id, document_type=document_type)
+        result = await self._session.execute(stmt)
+        return result.scalar_one()
+
 
 class ReviewRepository:
     def __init__(self, session: AsyncSession) -> None:

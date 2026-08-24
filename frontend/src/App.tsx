@@ -12,6 +12,7 @@ import { DocumentTypesPage } from '@/pages/DocumentTypes'
 import { AuditPage } from '@/pages/Audit'
 import { DocumentsPage } from '@/pages/Documents'
 import { UsersPage } from '@/pages/Users'
+import { ValidationPage } from '@/pages/Validation'
 
 export default function App() {
   return (
@@ -98,6 +99,14 @@ export default function App() {
             <RequireRole roles={['admin']}>
               <UsersPage />
             </RequireRole>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/validation"
+        element={
+          <ProtectedRoute>
+            <ValidationPage />
           </ProtectedRoute>
         }
       />

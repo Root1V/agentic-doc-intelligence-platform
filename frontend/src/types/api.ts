@@ -170,6 +170,28 @@ export interface AuditLogResponse {
   entries: AuditEntry[]
 }
 
+export interface ValidationIssueEntry {
+  id: string
+  document_id: string | null
+  document_filename: string | null
+  document_type: string | null
+  batch_id: string
+  rule_id: string
+  category: string
+  field_path: string | null
+  severity: 'info' | 'warning' | 'error'
+  message: string
+  confidence: number
+  confidence_method: string
+  explanation: string
+  created_at: string
+}
+
+export interface ValidationLogResponse {
+  total: number
+  issues: ValidationIssueEntry[]
+}
+
 export interface LoginRequest {
   email: string
   password: string

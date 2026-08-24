@@ -20,6 +20,7 @@ import type {
   ReviewItem,
   TypeSuggestion,
   UpdateTypeSuggestionRequest,
+  ValidationLogResponse,
 } from '@/types/api'
 
 const TERMINAL_BATCH_STATUSES = new Set(['completed'])
@@ -242,6 +243,25 @@ export function useAuditLog(params: { limit?: number; offset?: number } = {}) {
     queryKey: ['audit-log', params],
     queryFn: async () => {
       const { data } = await apiClient.get<AuditLogResponse>('/audit', { params })
+      return data
+    },
+  })
+}
+
+export interface ValidationLogFilters {
+  category?: string
+  severity?: string
+  document_type?: string
+  rule_id?: string
+  limit?: number
+  offset?: number
+}
+
+export function useValidationLog(filters: ValidationLogFilters = {}) {
+  return useQuery({
+    queryKey: ['validation-log', filters],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ValidationLogResponse>('/validation', { params: filters })
       return data
     },
   })

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Upload, Files, ClipboardCheck, Sparkles, BookOpen, History, LogOut, FileStack, Users } from 'lucide-react'
+import { LayoutDashboard, Upload, Files, ClipboardCheck, Sparkles, BookOpen, History, LogOut, FileStack, Users, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { canExecute, clearSession, getUserName, getUserRole, isAdmin } from '@/lib/auth'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { to: '/type-suggestions', label: 'Sugerencias de tipo', icon: Sparkles, requiresExecute: false },
   { to: '/document-types', label: 'Plantillas', icon: BookOpen, requiresExecute: false },
   { to: '/audit', label: 'Auditoría', icon: History, requiresExecute: false },
+  { to: '/validation', label: 'Validación', icon: ShieldCheck, requiresExecute: false },
 ]
 
 export function Sidebar() {
