@@ -4,6 +4,7 @@ import { useBatch } from '@/lib/queries'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { DocumentThumbnail } from '@/components/documents/DocumentThumbnail'
+import { isPipelineInProgress, PipelineStepper } from '@/components/documents/PipelineStepper'
 
 const STATUS_LABEL: Record<string, string> = {
   uploaded: 'Cargado',
@@ -63,9 +64,13 @@ export function BatchDetailPage() {
                         {doc.document_type}
                       </Badge>
                     )}
-                    <Badge variant={doc.needs_review ? 'destructive' : 'secondary'} className="text-[10px]">
-                      {STATUS_LABEL[doc.status] ?? doc.status}
-                    </Badge>
+                    {isPipelineInProgress(doc.status) ? (
+                      <PipelineStepper status={doc.status} />
+                    ) : (
+                      <Badge variant={doc.needs_review ? 'destructive' : 'secondary'} className="text-[10px]">
+                        {STATUS_LABEL[doc.status] ?? doc.status}
+                      </Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>

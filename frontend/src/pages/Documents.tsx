@@ -13,7 +13,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-const STATUS_OPTIONS = ['uploaded', 'processing', 'segmented', 'extracted', 'needs_review', 'completed', 'failed']
+const STATUS_OPTIONS = [
+  'uploaded',
+  'parsing',
+  'classifying',
+  'extracting',
+  'segmented',
+  'extracted',
+  'validating',
+  'needs_review',
+  'completed',
+  'failed',
+]
 const ALL = '__all__'
 const PAGE_SIZE = 25
 

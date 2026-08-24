@@ -101,6 +101,7 @@ def flatten_top_level_fields(instance: BaseModel) -> dict[str, Any]:
 async def _classify_and_extract(
     *,
     settings: Settings,
+    session: AsyncSession,
     parsed: ParsedDocument,
     document_id: uuid.UUID,
     batch_id: uuid.UUID,
@@ -109,6 +110,13 @@ async def _classify_and_extract(
     extraction_repo: ExtractionRepository,
     type_suggestion_repo: TypeSuggestionRepository,
 ) -> DocumentFields | None:
+    # Each stage transition commits immediately (not batched with the rest
+    # of the document's processing) so a concurrent GET /batches/{id} poll
+    # observes the pipeline actually advancing, not a single jump from
+    # "uploaded" to "extracted" once the whole document is done — see the
+    # frontend's PipelineStepper, the reason this granularity exists.
+    await document_repo.set_status(document_id, "classifying")
+    await session.commit()
     classification = await asyncio.to_thread(classify_document, settings, parsed, document_id=str(document_id))
 
     await document_repo.set_classification(
@@ -118,6 +126,8 @@ async def _classify_and_extract(
         reasoning=classification.reasoning,
         needs_review=classification_needs_review(settings, classification),
     )
+    await document_repo.set_status(document_id, "extracting")
+    await session.commit()
 
     outcome = await asyncio.to_thread(
         extract_document, settings, parsed, classification.document_type, document_id=str(document_id)
@@ -187,6 +197,7 @@ async def _suggest_type_if_promising(
 async def _process_uploaded_file(
     *,
     settings: Settings,
+    session: AsyncSession,
     backend: ParserBackend,
     batch_id: uuid.UUID,
     document_id: uuid.UUID,
@@ -212,6 +223,8 @@ async def _process_uploaded_file(
     are classified/extracted independently, with per-segment failure
     isolation matching the existing per-document isolation in
     ``process_batch``."""
+    await document_repo.set_status(document_id, "parsing")
+    await session.commit()
     file_bytes = await asyncio.to_thread(object_store.get, storage_key)
     parsed = await asyncio.to_thread(parse_document, settings, backend, file_bytes, filename, document_id=str(document_id))
     segments = await asyncio.to_thread(segment_document, settings, parsed, document_id=str(document_id))
@@ -219,6 +232,7 @@ async def _process_uploaded_file(
     if len(segments) <= 1:
         fields = await _classify_and_extract(
             settings=settings,
+            session=session,
             parsed=parsed,
             document_id=document_id,
             batch_id=batch_id,
@@ -230,6 +244,7 @@ async def _process_uploaded_file(
         return [fields] if fields is not None else []
 
     await document_repo.set_status(document_id, "segmented")
+    await session.commit()
     all_fields: list[DocumentFields] = []
     for segment in segments:
         sliced = slice_by_pages(parsed, segment.start_page, segment.end_page)
@@ -241,9 +256,11 @@ async def _process_uploaded_file(
             page_start=segment.start_page,
             page_end=segment.end_page,
         )
+        await session.commit()
         try:
             fields = await _classify_and_extract(
                 settings=settings,
+                session=session,
                 parsed=sliced,
                 document_id=child.id,
                 batch_id=batch_id,
@@ -295,6 +312,7 @@ async def process_batch(
             try:
                 fields = await _process_uploaded_file(
                     settings=settings,
+                    session=session,
                     backend=backend,
                     batch_id=batch_id,
                     document_id=document.id,
@@ -322,6 +340,8 @@ async def process_batch(
 
     rules = build_default_rules(settings)
     for current in all_fields:
+        await document_repo.set_status(current.document_id, "validating")
+        await session.commit()
         siblings = [f for f in all_fields if f.document_id != current.document_id]
         context = ValidationContext(
             batch_id=batch_id,
