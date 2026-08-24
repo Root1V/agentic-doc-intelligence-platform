@@ -7,8 +7,11 @@ Kept synchronous (LLM/OCR calls are blocking) and run via
 from __future__ import annotations
 
 from idp.classification.classifier import ClassificationResult, classify
+from idp.classification.type_discovery import suggest_document_type
 from idp.config import Settings
 from idp.domain.document_types import DocumentType
+from idp.domain.schemas.generic import GenericSchema
+from idp.domain.type_suggestion import DocumentTypeProposal
 from idp.extraction.base import ExtractionOutcome
 from idp.extraction.registry import get_extractor
 from idp.observability.otel import traced_stage
@@ -43,3 +46,8 @@ def extract_document(
     with traced_stage("extract", document_id=document_id, document_type=document_type.value):
         extractor = get_extractor(document_type)
         return extractor.extract(parsed, settings, correction_note)
+
+
+def suggest_type(settings: Settings, generic_result: GenericSchema, *, document_id: str) -> DocumentTypeProposal:
+    with traced_stage("suggest_type", document_id=document_id):
+        return suggest_document_type(settings, generic_result)

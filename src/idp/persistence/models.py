@@ -153,6 +153,32 @@ class AuditLogEntry(Base):
     review_item: Mapped["ReviewItem"] = relationship(back_populates="audit_entries")
 
 
+class DocumentTypeSuggestion(Base):
+    """A drafted proposal for a new ``DocumentType``, produced when a
+    document falls into 'generic' and its content looks like a stable,
+    recurring business shape (see ``classification/type_discovery.py``).
+    Never auto-applied: a human reviews it via GET/POST
+    ``/type-suggestions`` and decides accept/reject. Accepting only marks
+    the proposal actionable — it does NOT register the type in
+    ``domain/document_types.py``; turning an accepted proposal into a real
+    registered DocumentType (schema + extractor + prompts) remains a
+    deliberate code change, same as every type added so far."""
+
+    __tablename__ = "document_type_suggestions"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    document_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+    batch_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("batches.id", ondelete="CASCADE"), nullable=False)
+    suggested_type_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    suggested_display_name: Mapped[str] = mapped_column(String(256), nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    fields: Mapped[list] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False)  # pending|accepted|rejected
+    reviewer_identity: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ReferenceEmployee(Base):
     """Minimal internal reference table backing category (d) validation
     (existence-in-database checks) via ``ReferenceDataPort``."""

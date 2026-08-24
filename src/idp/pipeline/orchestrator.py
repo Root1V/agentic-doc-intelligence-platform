@@ -20,9 +20,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from idp.classification.classifier import needs_review as classification_needs_review
 from idp.config import Settings
+from idp.domain.document_types import DocumentType
 from idp.domain.envelope import Extracted
 from idp.domain.request_payload import RequestInputPayload
 from idp.domain.schemas import schema_for
+from idp.domain.schemas.generic import GenericSchema
 from idp.extraction.agentic.loop import ExtractionIncomplete
 from idp.observability.otel import traced_stage
 from idp.parsing.base import ParserBackend
@@ -34,10 +36,11 @@ from idp.persistence.repositories import (
     DocumentRepository,
     ExtractionRepository,
     ReviewRepository,
+    TypeSuggestionRepository,
     ValidationRepository,
 )
 from idp.parsing.normalize import ParsedDocument, slice_by_pages
-from idp.pipeline.stages import classify_document, extract_document, parse_document, segment_document
+from idp.pipeline.stages import classify_document, extract_document, parse_document, segment_document, suggest_type
 from idp.review.queue import enqueue_review_items
 from idp.review.routing import find_review_candidates
 from idp.storage.object_store import ObjectStore
@@ -100,9 +103,11 @@ async def _classify_and_extract(
     settings: Settings,
     parsed: ParsedDocument,
     document_id: uuid.UUID,
+    batch_id: uuid.UUID,
     parser_backend_name: str,
     document_repo: DocumentRepository,
     extraction_repo: ExtractionRepository,
+    type_suggestion_repo: TypeSuggestionRepository,
 ) -> DocumentFields | None:
     classification = await asyncio.to_thread(classify_document, settings, parsed, document_id=str(document_id))
 
@@ -132,10 +137,50 @@ async def _classify_and_extract(
     )
     await document_repo.set_status(document_id, "extracted")
 
+    if classification.document_type == DocumentType.GENERIC and isinstance(outcome.schema_instance, GenericSchema):
+        await _suggest_type_if_promising(
+            settings,
+            outcome.schema_instance,
+            document_id=document_id,
+            batch_id=batch_id,
+            type_suggestion_repo=type_suggestion_repo,
+        )
+
     return DocumentFields(
         document_id=document_id,
         document_type=classification.document_type.value,
         fields=flatten_top_level_fields(outcome.schema_instance),
+    )
+
+
+async def _suggest_type_if_promising(
+    settings: Settings,
+    generic_result: GenericSchema,
+    *,
+    document_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    type_suggestion_repo: TypeSuggestionRepository,
+) -> None:
+    """Best-effort: a document that fell into 'generic' gets one more LLM
+    pass asking whether its content looks like a stable, recurring
+    business document type worth promoting (see
+    classification/type_discovery.py). A failure or a 'not promotable'
+    verdict here must never affect the document's own processing — this is
+    a side-channel signal for a human, not part of the document's pipeline
+    result."""
+    try:
+        proposal = await asyncio.to_thread(suggest_type, settings, generic_result, document_id=str(document_id))
+    except Exception:
+        return
+    if not proposal.is_promotable or not proposal.suggested_type_name:
+        return
+    await type_suggestion_repo.create(
+        document_id=document_id,
+        batch_id=batch_id,
+        suggested_type_name=proposal.suggested_type_name,
+        suggested_display_name=proposal.suggested_display_name or proposal.suggested_type_name,
+        rationale=proposal.rationale,
+        fields=[f.model_dump() for f in proposal.fields],
     )
 
 
@@ -150,6 +195,7 @@ async def _process_uploaded_file(
     object_store: ObjectStore,
     document_repo: DocumentRepository,
     extraction_repo: ExtractionRepository,
+    type_suggestion_repo: TypeSuggestionRepository,
 ) -> list[DocumentFields]:
     """Parses the raw physical upload once, then checks whether it actually
     bundles more than one logical document (segmentation.detect_segments —
@@ -175,9 +221,11 @@ async def _process_uploaded_file(
             settings=settings,
             parsed=parsed,
             document_id=document_id,
+            batch_id=batch_id,
             parser_backend_name=backend.name,
             document_repo=document_repo,
             extraction_repo=extraction_repo,
+            type_suggestion_repo=type_suggestion_repo,
         )
         return [fields] if fields is not None else []
 
@@ -198,9 +246,11 @@ async def _process_uploaded_file(
                 settings=settings,
                 parsed=sliced,
                 document_id=child.id,
+                batch_id=batch_id,
                 parser_backend_name=backend.name,
                 document_repo=document_repo,
                 extraction_repo=extraction_repo,
+                type_suggestion_repo=type_suggestion_repo,
             )
         except ExtractionIncomplete:
             await document_repo.mark_needs_review(child.id)
@@ -228,6 +278,7 @@ async def process_batch(
     extraction_repo = ExtractionRepository(session)
     validation_repo = ValidationRepository(session)
     review_repo = ReviewRepository(session)
+    type_suggestion_repo = TypeSuggestionRepository(session)
 
     batch = await batch_repo.get(batch_id)
     if batch is None:
@@ -252,6 +303,7 @@ async def process_batch(
                     object_store=object_store,
                     document_repo=document_repo,
                     extraction_repo=extraction_repo,
+                    type_suggestion_repo=type_suggestion_repo,
                 )
             except ExtractionIncomplete:
                 await document_repo.mark_needs_review(document.id)

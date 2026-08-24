@@ -5,6 +5,7 @@ directly."""
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +15,7 @@ from idp.persistence.models import (
     AuditLogEntry,
     Batch,
     Document,
+    DocumentTypeSuggestion,
     Extraction,
     ReferenceEmployee,
     ReviewItem,
@@ -192,6 +194,55 @@ class ReviewRepository:
         self._session.add(entry)
         await self._session.flush()
         return entry
+
+
+class TypeSuggestionRepository:
+    """Backs ``api/routes/type_suggestions.py`` — the human-review queue
+    for drafted ``DocumentType`` proposals (see
+    ``classification/type_discovery.py``)."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create(
+        self,
+        *,
+        document_id: uuid.UUID,
+        batch_id: uuid.UUID,
+        suggested_type_name: str,
+        suggested_display_name: str,
+        rationale: str,
+        fields: list[dict],
+    ) -> DocumentTypeSuggestion:
+        row = DocumentTypeSuggestion(
+            document_id=document_id,
+            batch_id=batch_id,
+            suggested_type_name=suggested_type_name,
+            suggested_display_name=suggested_display_name,
+            rationale=rationale,
+            fields=fields,
+        )
+        self._session.add(row)
+        await self._session.flush()
+        return row
+
+    async def list_pending(self) -> list[DocumentTypeSuggestion]:
+        stmt = select(DocumentTypeSuggestion).where(DocumentTypeSuggestion.status == "pending")
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get(self, suggestion_id: uuid.UUID) -> DocumentTypeSuggestion | None:
+        return await self._session.get(DocumentTypeSuggestion, suggestion_id)
+
+    async def resolve(self, suggestion_id: uuid.UUID, *, decision: str, reviewer_identity: str) -> DocumentTypeSuggestion:
+        row = await self._session.get(DocumentTypeSuggestion, suggestion_id)
+        if row is None:
+            raise ValueError(f"type suggestion not found: {suggestion_id}")
+        row.status = decision
+        row.reviewer_identity = reviewer_identity
+        row.reviewed_at = datetime.now(UTC)
+        await self._session.flush()
+        return row
 
 
 class ReferenceDataRepository:

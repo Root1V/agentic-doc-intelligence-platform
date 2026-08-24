@@ -9,7 +9,7 @@ from fastapi import FastAPI
 
 from opentelemetry import trace
 
-from idp.api.routes import batches, documents, review
+from idp.api.routes import batches, documents, review, type_suggestions
 from idp.config import get_settings
 from idp.observability.otel import setup_tracing
 from idp.storage.object_store import S3ObjectStore
@@ -32,6 +32,7 @@ def create_app() -> FastAPI:
     app.include_router(batches.router)
     app.include_router(documents.router)
     app.include_router(review.router)
+    app.include_router(type_suggestions.router)
 
     @app.get("/health")
     async def health() -> dict:

@@ -13,7 +13,7 @@ from idp.llm.structured_output import extract_structured
 from idp.observability.otel import traced_llm_call
 from idp.parsing.normalize import ParsedDocument
 
-_TYPE_DESCRIPTIONS = {
+TYPE_DESCRIPTIONS = {
     DocumentType.PAYSLIP: "boleta de pago — detalle de ingresos/descuentos de un empleado en un periodo",
     DocumentType.INSURANCE_DISCLOSURE: "declaracion personal de seguros (p. ej. seguro de desgravamen) asociada a un prestamo",
     DocumentType.AUTHORIZATION_LETTER: (
@@ -73,7 +73,7 @@ _TYPE_DESCRIPTIONS = {
     ),
     DocumentType.GENERIC: "cualquier otro documento que no encaje claramente en los tipos anteriores",
 }
-_TYPE_LIST = "\n".join(f"- {t.value}: {desc}" for t, desc in _TYPE_DESCRIPTIONS.items())
+_TYPE_LIST = "\n".join(f"- {t.value}: {desc}" for t, desc in TYPE_DESCRIPTIONS.items())
 
 _SYSTEM_PROMPT = f"""Eres un clasificador de documentos empresariales. Dado el texto \
 extraido de un documento, determina su tipo. Los tipos validos son:
