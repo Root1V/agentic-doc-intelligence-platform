@@ -13,6 +13,7 @@ import { AuditPage } from '@/pages/Audit'
 import { DocumentsPage } from '@/pages/Documents'
 import { UsersPage } from '@/pages/Users'
 import { ValidationPage } from '@/pages/Validation'
+import { ValidationRulesPage } from '@/pages/ValidationRules'
 
 export default function App() {
   return (
@@ -107,6 +108,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <ValidationPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/validation-rules"
+        element={
+          <ProtectedRoute>
+            <ValidationRulesPage />
           </ProtectedRoute>
         }
       />

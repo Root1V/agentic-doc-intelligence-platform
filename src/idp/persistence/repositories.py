@@ -22,6 +22,7 @@ from idp.persistence.models import (
     ReviewItem,
     User,
     ValidationIssue,
+    ValidationRuleDefinition,
 )
 
 
@@ -410,6 +411,140 @@ class TypeSuggestionRepository:
             row.suggested_display_name = suggested_display_name
         if fields is not None:
             row.fields = fields
+        await self._session.flush()
+        return row
+
+
+class ValidationRuleRepository:
+    """Backs api/routes/validation_rules.py and
+    pipeline/orchestrator.py::build_default_rules. Two row kinds — see
+    persistence/models.py::ValidationRuleDefinition's docstring."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create_cel_draft(
+        self,
+        *,
+        rule_id: str,
+        category: str,
+        document_type: str | None,
+        field_path: str | None,
+        description_nl: str | None,
+        condition_cel: str,
+        applies_when_cel: str | None,
+        severity: str,
+        message_pass: str,
+        message_fail: str,
+        rationale: str | None,
+        created_by: str,
+    ) -> ValidationRuleDefinition:
+        row = ValidationRuleDefinition(
+            kind="cel",
+            rule_id=rule_id,
+            category=category,
+            document_type=document_type,
+            field_path=field_path,
+            description_nl=description_nl,
+            condition_cel=condition_cel,
+            applies_when_cel=applies_when_cel,
+            severity=severity,
+            message_pass=message_pass,
+            message_fail=message_fail,
+            rationale=rationale,
+            status="draft",
+            created_by=created_by,
+        )
+        self._session.add(row)
+        await self._session.flush()
+        return row
+
+    async def get_or_create_toggle(self, *, rule_id: str, category: str) -> ValidationRuleDefinition:
+        """Idempotent: a hardcoded rule_id has no row at all until the
+        first time someone disables it. GET /validation-rules/toggles
+        synthesizes a virtual 'active' row for any hardcoded rule_id with
+        no row yet, so the frontend never needs to distinguish 'no row'
+        from 'row with status=active'."""
+        existing = await self.get_by_rule_id(rule_id)
+        if existing is not None:
+            return existing
+        row = ValidationRuleDefinition(kind="toggle", rule_id=rule_id, category=category, status="active")
+        self._session.add(row)
+        await self._session.flush()
+        return row
+
+    async def get(self, definition_id: uuid.UUID) -> ValidationRuleDefinition | None:
+        return await self._session.get(ValidationRuleDefinition, definition_id)
+
+    async def get_by_rule_id(self, rule_id: str) -> ValidationRuleDefinition | None:
+        stmt = select(ValidationRuleDefinition).where(ValidationRuleDefinition.rule_id == rule_id)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def list_by_status(self, status: str, *, kind: str | None = None) -> list[ValidationRuleDefinition]:
+        stmt = select(ValidationRuleDefinition).where(ValidationRuleDefinition.status == status)
+        if kind is not None:
+            stmt = stmt.where(ValidationRuleDefinition.kind == kind)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_all(self, *, kind: str | None = None) -> list[ValidationRuleDefinition]:
+        stmt = select(ValidationRuleDefinition)
+        if kind is not None:
+            stmt = stmt.where(ValidationRuleDefinition.kind == kind)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_active_cel_rules(self) -> list[ValidationRuleDefinition]:
+        return await self.list_by_status("active", kind="cel")
+
+    async def list_disabled_toggle_rule_ids(self) -> set[str]:
+        rows = await self.list_by_status("disabled", kind="toggle")
+        return {row.rule_id for row in rows}
+
+    async def update_draft(
+        self,
+        definition_id: uuid.UUID,
+        *,
+        condition_cel: str | None = None,
+        applies_when_cel: str | None = None,
+        severity: str | None = None,
+        message_pass: str | None = None,
+        message_fail: str | None = None,
+        field_path: str | None = None,
+    ) -> ValidationRuleDefinition:
+        """Refines a still-draft kind="cel" row before activation — the
+        caller (api/routes/validation_rules.py) is responsible for
+        rejecting the call when the row isn't status="draft", same split
+        of responsibility as TypeSuggestionRepository.update."""
+        row = await self._session.get(ValidationRuleDefinition, definition_id)
+        if row is None:
+            raise ValueError(f"validation rule definition not found: {definition_id}")
+        if condition_cel is not None:
+            row.condition_cel = condition_cel
+        if applies_when_cel is not None:
+            row.applies_when_cel = applies_when_cel
+        if severity is not None:
+            row.severity = severity
+        if message_pass is not None:
+            row.message_pass = message_pass
+        if message_fail is not None:
+            row.message_fail = message_fail
+        if field_path is not None:
+            row.field_path = field_path
+        await self._session.flush()
+        return row
+
+    async def set_status(self, definition_id: uuid.UUID, *, status: str, reviewer_identity: str) -> ValidationRuleDefinition:
+        """Covers activate/reject/disable (kind="cel") and enable/disable
+        (kind="toggle") — one status-transition method, same as
+        TypeSuggestionRepository.resolve."""
+        row = await self._session.get(ValidationRuleDefinition, definition_id)
+        if row is None:
+            raise ValueError(f"validation rule definition not found: {definition_id}")
+        row.status = status
+        row.reviewer_identity = reviewer_identity
+        row.reviewed_at = datetime.now(UTC)
         await self._session.flush()
         return row
 

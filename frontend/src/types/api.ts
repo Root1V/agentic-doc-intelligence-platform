@@ -192,6 +192,65 @@ export interface ValidationLogResponse {
   issues: ValidationIssueEntry[]
 }
 
+export type RuleKind = 'cel' | 'toggle'
+export type RuleStatus = 'draft' | 'active' | 'disabled' | 'rejected'
+export type RuleCelCategory = 'self' | 'request_input' | 'reference_data'
+
+export interface ValidationRule {
+  id: string
+  kind: RuleKind
+  rule_id: string
+  category: string
+  document_type: string | null
+  field_path: string | null
+  description_nl: string | null
+  condition_cel: string | null
+  applies_when_cel: string | null
+  severity: 'info' | 'warning' | 'error' | null
+  message_pass: string | null
+  message_fail: string | null
+  rationale: string | null
+  status: RuleStatus
+  created_by: string | null
+  reviewer_identity: string | null
+}
+
+export interface DraftRuleRequest {
+  description: string
+  document_type: string
+  category: RuleCelCategory
+  field_path?: string
+  existing_fields_hint?: string[]
+}
+
+export interface ManualRuleRequest {
+  rule_id_suffix: string
+  document_type: string
+  category: RuleCelCategory
+  field_path?: string
+  condition_cel: string
+  applies_when_cel?: string
+  severity: 'info' | 'warning' | 'error'
+  message_pass: string
+  message_fail: string
+  rationale?: string
+}
+
+export interface UpdateRuleRequest {
+  condition_cel?: string
+  applies_when_cel?: string
+  severity?: 'info' | 'warning' | 'error'
+  message_pass?: string
+  message_fail?: string
+  field_path?: string
+}
+
+export interface ToggleRule {
+  rule_id: string
+  category: string
+  status: 'active' | 'disabled'
+}
+
 export interface LoginRequest {
   email: string
   password: string

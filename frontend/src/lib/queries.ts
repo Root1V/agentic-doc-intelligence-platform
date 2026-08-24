@@ -13,14 +13,19 @@ import type {
   DocumentDetailResponse,
   DocumentListResponse,
   DocumentTypeCatalogResponse,
+  DraftRuleRequest,
   LoginRequest,
   LoginResponse,
+  ManualRuleRequest,
   ReviewCorrectionRequest,
   ReviewCorrectionResponse,
   ReviewItem,
+  ToggleRule,
   TypeSuggestion,
+  UpdateRuleRequest,
   UpdateTypeSuggestionRequest,
   ValidationLogResponse,
+  ValidationRule,
 } from '@/types/api'
 
 const TERMINAL_BATCH_STATUSES = new Set(['completed'])
@@ -287,5 +292,80 @@ export function useCreateUser() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
     },
+  })
+}
+
+export function useValidationRules(filters: { kind?: string; status_filter?: string } = {}) {
+  return useQuery({
+    queryKey: ['validation-rules', filters],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ValidationRule[]>('/validation-rules', { params: filters })
+      return data
+    },
+  })
+}
+
+export function useDraftValidationRule() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: DraftRuleRequest) => {
+      const { data } = await apiClient.post<ValidationRule>('/validation-rules/draft', body)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['validation-rules'] }),
+  })
+}
+
+export function useCreateManualRule() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: ManualRuleRequest) => {
+      const { data } = await apiClient.post<ValidationRule>('/validation-rules/manual', body)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['validation-rules'] }),
+  })
+}
+
+export function useUpdateValidationRule() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, body }: { id: string; body: UpdateRuleRequest }) => {
+      const { data } = await apiClient.patch<ValidationRule>(`/validation-rules/${id}`, body)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['validation-rules'] }),
+  })
+}
+
+export function useResolveValidationRule() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, decision }: { id: string; decision: 'activate' | 'reject' | 'disable' }) => {
+      const { data } = await apiClient.post<ValidationRule>(`/validation-rules/${id}/${decision}`)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['validation-rules'] }),
+  })
+}
+
+export function useToggleRules() {
+  return useQuery({
+    queryKey: ['validation-rule-toggles'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ToggleRule[]>('/validation-rules/toggles')
+      return data
+    },
+  })
+}
+
+export function useSetRuleToggle() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ ruleId, action }: { ruleId: string; action: 'enable' | 'disable' }) => {
+      const { data } = await apiClient.post<ToggleRule>(`/validation-rules/toggles/${ruleId}/${action}`)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['validation-rule-toggles'] }),
   })
 }

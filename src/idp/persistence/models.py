@@ -208,3 +208,50 @@ class ReferenceEmployee(Base):
     employee_code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     full_name: Mapped[str] = mapped_column(String(256), nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class ValidationRuleDefinition(Base):
+    """Data-driven layer on top of validation/base.py::ValidationRule,
+    additive not a replacement. Two row 'kinds':
+
+    kind="cel": a human- or LLM-drafted CEL (Common Expression Language)
+    condition, deliberately scoped to categories "self", "request_input"
+    and "reference_data" (existence-only) — the categories that don't
+    require fuzzy-matching or a network call (see validation/rules/generic.py
+    for why cross_document/external_system can't be expressed this way).
+    Lifecycle: draft -> active -> disabled, or draft -> rejected. Loaded
+    into DataDrivenRule instances by
+    pipeline/orchestrator.py::build_default_rules whenever status="active".
+
+    kind="toggle": an on/off switch for one of the hardcoded rule_ids from
+    build_default_rules — no condition of its own (the hardcoded Python
+    keeps its logic; only its enabled state becomes data-driven). status
+    is "active" (enabled — the default; most rule_ids never get a row
+    unless someone disables them) or "disabled".
+
+    Rows are never hard-deleted, matching this codebase's existing
+    convention for audit-relevant rows (AuditLogEntry, resolved
+    DocumentTypeSuggestion) — 'deleting' a rule/toggle is a status
+    transition, preserving what was tried."""
+
+    __tablename__ = "validation_rule_definitions"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)  # "cel" | "toggle"
+    rule_id: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    category: Mapped[str] = mapped_column(String(32), nullable=False)
+    document_type: Mapped[str | None] = mapped_column(String(64), nullable=True)  # null = applies to any type
+    field_path: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    description_nl: Mapped[str | None] = mapped_column(Text, nullable=True)  # the human's plain-language prompt, kind="cel" only
+    condition_cel: Mapped[str | None] = mapped_column(Text, nullable=True)
+    applies_when_cel: Mapped[str | None] = mapped_column(Text, nullable=True)
+    severity: Mapped[str | None] = mapped_column(String(16), nullable=True)  # info|warning|error
+    message_pass: Mapped[str | None] = mapped_column(Text, nullable=True)
+    message_fail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="draft", server_default="draft", nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    reviewer_identity: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

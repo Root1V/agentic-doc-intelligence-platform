@@ -38,6 +38,7 @@ from idp.persistence.repositories import (
     ReviewRepository,
     TypeSuggestionRepository,
     ValidationRepository,
+    ValidationRuleRepository,
 )
 from idp.parsing.normalize import ParsedDocument, slice_by_pages
 from idp.pipeline.stages import classify_document, extract_document, parse_document, segment_document, suggest_type
@@ -50,6 +51,7 @@ from idp.validation.engine import run_validation
 from idp.validation.ports import ExternalSystemPort, ReferenceDataPort
 from idp.validation.rules.batch_rules import DuplicateDocumentIdentifier, EmployeeNameCrossDocumentMatch
 from idp.validation.rules.external_system_rules import InsurancePolicyVerifiedExternally
+from idp.validation.rules.generic import DataDrivenRule
 from idp.validation.rules.reference_data_rules import EmployeeCodeExistsInReferenceData, EmployeeNameExistsInReferenceData
 from idp.validation.rules.request_input_rules import ExpectedEmployeeCodeMatches
 from idp.validation.rules.self_rules import DniFormatValid, PayslipArithmeticConsistency
@@ -61,10 +63,12 @@ def make_parser_backend(settings: Settings) -> ParserBackend:
     return PaddleOCRBackend(settings)
 
 
-def build_default_rules(settings: Settings) -> list[ValidationRule]:
-    """The registered rule set for Fase 0 — one or more concrete rules per
-    of the 6 categories (5 from the user's feedback plus intra-document
-    'self' checks)."""
+def _hardcoded_rules(settings: Settings) -> list[ValidationRule]:
+    """The registered hand-written rule set — one or more concrete rules
+    per of the 6 categories (5 from the user's feedback plus intra-document
+    'self' checks). Extracted to its own function so
+    hardcoded_rule_metadata() can read rule_id/category off each real
+    instance instead of duplicating those strings by hand elsewhere."""
     return [
         PayslipArithmeticConsistency(),
         DniFormatValid("insurance_disclosure", "insured_dni"),
@@ -83,6 +87,34 @@ def build_default_rules(settings: Settings) -> list[ValidationRule]:
         EmployeeNameExistsInReferenceData(settings),
         InsurancePolicyVerifiedExternally(),
     ]
+
+
+def hardcoded_rule_metadata(settings: Settings) -> list[tuple[str, str]]:
+    """(rule_id, category) for every hardcoded rule — used by
+    GET/POST /validation-rules/toggles/* so that endpoint never has to
+    hand-duplicate the exact rule_id strings from validation/rules/*.py."""
+    return [(r.rule_id, r.category.value) for r in _hardcoded_rules(settings)]
+
+
+async def build_default_rules(settings: Settings, session: AsyncSession) -> list[ValidationRule]:
+    """The full rule set: the hardcoded instances (minus any rule_id an
+    operator has toggled off via a kind="toggle" row), plus one
+    DataDrivenRule per active kind="cel" row. Async because it now needs a
+    DB round-trip — a rule activated/disabled between batch runs must be
+    picked up on the very next run, not only at process start."""
+    hardcoded = [r for r in _hardcoded_rules(settings) if r.rule_id not in await ValidationRuleRepository(session).list_disabled_toggle_rule_ids()]
+
+    data_driven: list[ValidationRule] = []
+    for row in await ValidationRuleRepository(session).list_active_cel_rules():
+        try:
+            data_driven.append(DataDrivenRule(row))
+        except Exception:
+            # Defense in depth — shouldn't happen given PATCH/activate
+            # already validate that the CEL compiles, but a corrupted row
+            # must not take down the whole batch.
+            continue
+
+    return hardcoded + data_driven
 
 
 def flatten_top_level_fields(instance: BaseModel) -> dict[str, Any]:
@@ -338,7 +370,7 @@ async def process_batch(
         await session.commit()
         all_fields.extend(fields)
 
-    rules = build_default_rules(settings)
+    rules = await build_default_rules(settings, session)
     for current in all_fields:
         await document_repo.set_status(current.document_id, "validating")
         await session.commit()
