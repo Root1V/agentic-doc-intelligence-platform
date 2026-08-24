@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Upload, ClipboardCheck, Sparkles, BookOpen, History, LogOut, FileStack } from 'lucide-react'
+import { LayoutDashboard, Upload, Files, ClipboardCheck, Sparkles, BookOpen, History, LogOut, FileStack } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { clearSession, getUserName } from '@/lib/auth'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Inicio', icon: LayoutDashboard, end: true },
   { to: '/upload', label: 'Subir documentos', icon: Upload },
+  { to: '/documents', label: 'Documentos', icon: Files },
   { to: '/review', label: 'Cola de revisión', icon: ClipboardCheck },
   { to: '/type-suggestions', label: 'Sugerencias de tipo', icon: Sparkles },
   { to: '/document-types', label: 'Plantillas', icon: BookOpen },

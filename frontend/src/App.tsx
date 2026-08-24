@@ -9,6 +9,7 @@ import { ReviewQueuePage } from '@/pages/ReviewQueue'
 import { TypeSuggestionsPage } from '@/pages/TypeSuggestions'
 import { DocumentTypesPage } from '@/pages/DocumentTypes'
 import { AuditPage } from '@/pages/Audit'
+import { DocumentsPage } from '@/pages/Documents'
 
 export default function App() {
   return (
@@ -35,6 +36,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <BatchDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/documents"
+        element={
+          <ProtectedRoute>
+            <DocumentsPage />
           </ProtectedRoute>
         }
       />
