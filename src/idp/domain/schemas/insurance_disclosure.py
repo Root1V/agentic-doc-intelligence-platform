@@ -8,7 +8,7 @@ document, not this underwriting declaration)."""
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from idp.domain.envelope import Extracted
 
@@ -24,7 +24,9 @@ class InsuranceDisclosureSchema(BaseModel):
     insured_paternal_surname: Extracted[str] | None = None
     insured_maternal_surname: Extracted[str] | None = None
     insured_dni: Extracted[str] | None = None
-    insurer_name: Extracted[str] | None = None
+    insurer_name: Extracted[str] | None = Field(
+        default=None, description="La aseguradora que emite la poliza (p. ej. 'RIMAC'), usualmente el logo/nombre en el encabezado — extraela si esta presente, no la omitas."
+    )
     loan_amount: Extracted[float] | None = None
     loan_term_months: Extracted[int] | None = None
     insurance_type: Extracted[str] | None = None

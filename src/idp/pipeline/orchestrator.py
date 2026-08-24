@@ -36,7 +36,8 @@ from idp.persistence.repositories import (
     ReviewRepository,
     ValidationRepository,
 )
-from idp.pipeline.stages import classify_document, extract_document, parse_document
+from idp.parsing.normalize import ParsedDocument, slice_by_pages
+from idp.pipeline.stages import classify_document, extract_document, parse_document, segment_document
 from idp.review.queue import enqueue_review_items
 from idp.review.routing import find_review_candidates
 from idp.storage.object_store import ObjectStore
@@ -66,6 +67,10 @@ def build_default_rules(settings: Settings) -> list[ValidationRule]:
         DniFormatValid("insurance_disclosure", "insured_dni"),
         DniFormatValid("authorization_letter", "client_dni"),
         DniFormatValid("loan_application", "applicant_dni"),
+        DniFormatValid("loan_approval_remittance", "applicant_dni"),
+        DniFormatValid("loan_payment_schedule", "client_dni"),
+        DniFormatValid("credit_summary", "member_dni"),
+        DniFormatValid("account_statement", "member_dni"),
         ExpectedEmployeeCodeMatches(),
         DuplicateDocumentIdentifier(),
         EmployeeNameCrossDocumentMatch(settings),
@@ -88,21 +93,15 @@ def flatten_top_level_fields(instance: BaseModel) -> dict[str, Any]:
     return out
 
 
-async def _process_single_document(
+async def _classify_and_extract(
     *,
     settings: Settings,
-    backend: ParserBackend,
+    parsed: ParsedDocument,
     document_id: uuid.UUID,
-    storage_key: str,
-    filename: str,
-    object_store: ObjectStore,
+    parser_backend_name: str,
     document_repo: DocumentRepository,
     extraction_repo: ExtractionRepository,
 ) -> DocumentFields | None:
-    file_bytes = await asyncio.to_thread(object_store.get, storage_key)
-
-    parsed = await asyncio.to_thread(parse_document, settings, backend, file_bytes, filename, document_id=str(document_id))
-
     classification = await asyncio.to_thread(classify_document, settings, parsed, document_id=str(document_id))
 
     await document_repo.set_classification(
@@ -126,7 +125,7 @@ async def _process_single_document(
         document_id=document_id,
         schema_version="1.0",
         payload=outcome.schema_instance.model_dump(mode="json"),
-        parser_backend=backend.name,
+        parser_backend=parser_backend_name,
         extraction_method=outcome.extraction_method,
     )
     await document_repo.set_status(document_id, "extracted")
@@ -136,6 +135,81 @@ async def _process_single_document(
         document_type=classification.document_type.value,
         fields=flatten_top_level_fields(outcome.schema_instance),
     )
+
+
+async def _process_uploaded_file(
+    *,
+    settings: Settings,
+    backend: ParserBackend,
+    batch_id: uuid.UUID,
+    document_id: uuid.UUID,
+    storage_key: str,
+    filename: str,
+    object_store: ObjectStore,
+    document_repo: DocumentRepository,
+    extraction_repo: ExtractionRepository,
+) -> list[DocumentFields]:
+    """Parses the raw physical upload once, then checks whether it actually
+    bundles more than one logical document (segmentation.detect_segments —
+    see that module's docstring for why this exists: a real 7-page PDF
+    turned out to be an email + a payment schedule + contract T&Cs + an
+    account statement, and forcing all of it through one classify->extract
+    pass timed out repeatedly).
+
+    The common case (one segment covering the whole file) processes in
+    place using the ``document_id`` row already created at upload time — no
+    new rows, no behavior change for anything that worked before
+    segmentation existed. Extra segments each get their own child Document
+    row (same storage_key — it's the same physical file, no re-upload) and
+    are classified/extracted independently, with per-segment failure
+    isolation matching the existing per-document isolation in
+    ``process_batch``."""
+    file_bytes = await asyncio.to_thread(object_store.get, storage_key)
+    parsed = await asyncio.to_thread(parse_document, settings, backend, file_bytes, filename, document_id=str(document_id))
+    segments = await asyncio.to_thread(segment_document, settings, parsed, document_id=str(document_id))
+
+    if len(segments) <= 1:
+        fields = await _classify_and_extract(
+            settings=settings,
+            parsed=parsed,
+            document_id=document_id,
+            parser_backend_name=backend.name,
+            document_repo=document_repo,
+            extraction_repo=extraction_repo,
+        )
+        return [fields] if fields is not None else []
+
+    await document_repo.set_status(document_id, "segmented")
+    all_fields: list[DocumentFields] = []
+    for segment in segments:
+        sliced = slice_by_pages(parsed, segment.start_page, segment.end_page)
+        child = await document_repo.create_child(
+            batch_id=batch_id,
+            parent_document_id=document_id,
+            storage_key=storage_key,
+            original_filename=f"{filename}#p{segment.start_page}-{segment.end_page}",
+            page_start=segment.start_page,
+            page_end=segment.end_page,
+        )
+        try:
+            fields = await _classify_and_extract(
+                settings=settings,
+                parsed=sliced,
+                document_id=child.id,
+                parser_backend_name=backend.name,
+                document_repo=document_repo,
+                extraction_repo=extraction_repo,
+            )
+        except ExtractionIncomplete:
+            await document_repo.mark_needs_review(child.id)
+            await document_repo.set_status(child.id, "needs_review")
+            fields = None
+        except Exception:
+            await document_repo.set_status(child.id, "failed")
+            fields = None
+        if fields is not None:
+            all_fields.append(fields)
+    return all_fields
 
 
 async def process_batch(
@@ -166,9 +240,10 @@ async def process_batch(
     for document in batch.documents:
         with traced_stage("process_document", batch_id=str(batch_id), document_id=str(document.id)):
             try:
-                fields = await _process_single_document(
+                fields = await _process_uploaded_file(
                     settings=settings,
                     backend=backend,
+                    batch_id=batch_id,
                     document_id=document.id,
                     storage_key=document.storage_key,
                     filename=document.original_filename,
@@ -179,7 +254,7 @@ async def process_batch(
             except ExtractionIncomplete:
                 await document_repo.mark_needs_review(document.id)
                 await document_repo.set_status(document.id, "needs_review")
-                fields = None
+                fields = []
             except Exception:
                 # A single document's failure (e.g. the configured LLM/VLM
                 # endpoint being unreachable) must not leave the whole batch
@@ -187,10 +262,9 @@ async def process_batch(
                 # document failed and keep going with the rest of the batch.
                 # The OTEL span above already records the exception.
                 await document_repo.set_status(document.id, "failed")
-                fields = None
+                fields = []
         await session.commit()
-        if fields is not None:
-            all_fields.append(fields)
+        all_fields.extend(fields)
 
     rules = build_default_rules(settings)
     for current in all_fields:

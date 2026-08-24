@@ -14,11 +14,17 @@ from idp.extraction.registry import get_extractor
 from idp.observability.otel import traced_stage
 from idp.parsing.base import ParserBackend
 from idp.parsing.normalize import ParsedDocument
+from idp.segmentation.splitter import DocumentSegment, detect_segments
 
 
 def parse_document(settings: Settings, backend: ParserBackend, file_bytes: bytes, filename: str, *, document_id: str) -> ParsedDocument:
     with traced_stage("parse", document_id=document_id, backend=backend.name):
         return backend.parse(file_bytes, filename)
+
+
+def segment_document(settings: Settings, parsed: ParsedDocument, *, document_id: str) -> list[DocumentSegment]:
+    with traced_stage("segment", document_id=document_id, page_count=parsed.page_count):
+        return detect_segments(settings, parsed)
 
 
 def classify_document(settings: Settings, parsed: ParsedDocument, *, document_id: str) -> ClassificationResult:

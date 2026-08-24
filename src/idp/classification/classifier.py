@@ -29,6 +29,36 @@ _TYPE_DESCRIPTIONS = {
         "seccion de evaluacion/aprobacion del banco. Se distingue de authorization_letter por ser un "
         "formulario de captura de datos multi-seccion, no una carta corta de autorizacion."
     ),
+    DocumentType.LOAN_APPROVAL_REMITTANCE: (
+        "ficha o registro breve de UNA sola seccion que resume el estado de aprobacion de un caso de "
+        "prestamo (p. ej. 'Estado: APROBADO - RRHH'), con DNI, nombre, contacto, importe solicitado, cuota "
+        "mensual y fecha de aprobacion. A diferencia de loan_application, no tiene secciones de datos "
+        "laborales, conyuge, patrimonio ni referencias."
+    ),
+    DocumentType.FOREIGN_RESIDENT_ID: (
+        "copia escaneada de uno o mas 'Carnet de Extranjeria' (documento de identidad de residente "
+        "extranjero en el Peru) — muestra apellidos, nombres, nacionalidad, fecha de nacimiento, numero de "
+        "carne, numero de pasaporte y fechas de inscripcion/emision/vencimiento. Puede incluir el registro "
+        "de mas de una persona."
+    ),
+    DocumentType.EMAIL_CORRESPONDENCE: (
+        "correo electronico (a menudo reenviado entre personal de banco/empleador) encontrado dentro del "
+        "paquete de documentos — tiene remitente, destinatario, fecha, y contenido de negocio variable que "
+        "puede ser cualquier cosa (una consulta de deuda, una aprobacion, una solicitud, etc.)."
+    ),
+    DocumentType.LOAN_PAYMENT_SCHEDULE: (
+        "'Cronograma de Pagos' — tabla de amortizacion de un credito emitida por una entidad financiera: "
+        "cabecera con datos del cliente/credito (monto, tasa, plazo) seguida de una tabla con una fila por "
+        "cuota (numero, fecha, monto, interes, capital, saldo)."
+    ),
+    DocumentType.CREDIT_SUMMARY: (
+        "ficha resumen de UNA sola pagina de un credito activo de un socio de una caja/cooperativa a modo "
+        "de vistazo (monto, plazo, cuota, tasa, estado) — sin tabla de cuotas fila por fila."
+    ),
+    DocumentType.ACCOUNT_STATEMENT: (
+        "'Estado de Cuenta' de un socio de una caja/cooperativa — identidad del socio, saldo de aportes, y "
+        "saldo/avance del producto (credito o ahorro) principal."
+    ),
     DocumentType.GENERIC: "cualquier otro documento que no encaje claramente en los tipos anteriores",
 }
 _TYPE_LIST = "\n".join(f"- {t.value}: {desc}" for t, desc in _TYPE_DESCRIPTIONS.items())

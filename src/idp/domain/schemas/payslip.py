@@ -27,8 +27,12 @@ class PayslipConcept(BaseModel):
 
 class PayslipSchema(BaseModel):
     employee_name: Extracted[str]
-    employee_code: Extracted[str] | None = None
-    employer_name: Extracted[str] | None = None
+    employee_code: Extracted[str] | None = Field(
+        default=None, description="El codigo de empleado (p. ej. 'Codigo AIRHSP') — extraelo si esta presente, no lo omitas."
+    )
+    employer_name: Extracted[str] | None = Field(
+        default=None, description="El campo 'Empleador' — extraelo si esta presente, no lo omitas."
+    )
     period: Extracted[str]
     gross_pay: Extracted[float]
     total_deductions: Extracted[float]

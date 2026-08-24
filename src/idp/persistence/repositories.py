@@ -64,6 +64,24 @@ class DocumentRepository:
         await self._session.flush()
         return doc
 
+    async def create_child(
+        self, *, batch_id: uuid.UUID, parent_document_id: uuid.UUID, storage_key: str, original_filename: str, page_start: int, page_end: int
+    ) -> Document:
+        """One logical document spawned by segmentation from a physical
+        upload that bundled more than one — same storage_key as the parent
+        (no re-upload needed, it's the same file), scoped to its page range."""
+        doc = Document(
+            batch_id=batch_id,
+            storage_key=storage_key,
+            original_filename=original_filename,
+            parent_document_id=parent_document_id,
+            page_start=page_start,
+            page_end=page_end,
+        )
+        self._session.add(doc)
+        await self._session.flush()
+        return doc
+
     async def get(self, document_id: uuid.UUID) -> Document | None:
         # populate_existing=True: without it, SQLAlchemy's identity map can
         # return an already-loaded Document from earlier in the same session

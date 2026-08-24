@@ -35,6 +35,42 @@ _TYPE_HINTS: dict[DocumentType, str] = {
         "asesor, o campos con nombre similar en secciones distintas del documento) y su descripcion "
         "aclara exactamente a cual corresponden."
     ),
+    DocumentType.LOAN_APPROVAL_REMITTANCE: (
+        "Es una ficha/registro breve de UNA sola seccion que resume el estado de aprobacion de un caso de "
+        "prestamo (p. ej. 'Estado: APROBADO - RRHH'), con datos de contacto del solicitante, el importe "
+        "solicitado, la cuota mensual y la fecha de aprobacion. NO tiene secciones de datos laborales, "
+        "conyuge, patrimonio ni referencias — no lo confundas con loan_application."
+    ),
+    DocumentType.FOREIGN_RESIDENT_ID: (
+        "Es una copia escaneada de uno o mas 'Carnet de Extranjeria' (documento de identidad de residente "
+        "extranjero en el Peru). El documento puede contener el registro de MAS DE UNA persona (p. ej. una "
+        "pareja) — extrae una entrada en la lista 'persons' por cada persona distinta que encuentres, no "
+        "mezcles los datos de dos personas en una sola entrada."
+    ),
+    DocumentType.EMAIL_CORRESPONDENCE: (
+        "Es un correo electronico (a menudo reenviado entre personal de banco/empleador) encontrado dentro "
+        "del paquete de documentos. Su contenido de negocio puede ser cualquier cosa — no asumas de "
+        "antemano de que trata (puede ser una consulta de deuda, una aprobacion, una solicitud, etc.). "
+        "Extrae los metadatos universales del correo (remitente, destinatario, fecha, asunto) como campos "
+        "fijos, y cualquier dato de negocio relevante mencionado en el cuerpo (nombres, DNIs, montos, "
+        "entidades) como entradas libres en 'key_facts'."
+    ),
+    DocumentType.LOAN_PAYMENT_SCHEDULE: (
+        "Es un 'Cronograma de Pagos' (tabla de amortizacion de un credito) emitido por una entidad "
+        "financiera: cabecera con datos del cliente y del credito (monto, tasa, plazo), seguida de una "
+        "tabla con una fila por cuota (numero, fecha, monto, interes, capital, saldo). Agrupa TODAS las "
+        "celdas de una misma fila de la tabla al leerlas, para armar cada entrada de 'installments' con "
+        "sus columnas correctas."
+    ),
+    DocumentType.CREDIT_SUMMARY: (
+        "Es una ficha resumen de UNA sola pagina que muestra un credito activo de un socio de una "
+        "caja/cooperativa a modo de vistazo (monto, plazo, cuota, tasa, estado) — NO tiene la tabla de "
+        "cuotas fila por fila (eso es loan_payment_schedule); no lo confundas con ese tipo."
+    ),
+    DocumentType.ACCOUNT_STATEMENT: (
+        "Es un 'Estado de Cuenta' de un socio de una caja/cooperativa: datos de identidad del socio, saldo "
+        "de aportes, y el saldo/avance del producto (credito o ahorro) principal asociado."
+    ),
 }
 
 

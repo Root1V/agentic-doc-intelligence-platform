@@ -32,6 +32,10 @@ class DocumentDetailResponse(BaseModel):
     document_type: str | None
     classification_confidence: float | None
     needs_review: bool
+    original_filename: str
+    parent_document_id: uuid.UUID | None
+    page_start: int | None
+    page_end: int | None
     extraction: dict | None
     validation_issues: list[ValidationIssueResponse]
 
@@ -49,6 +53,10 @@ async def get_document(document_id: uuid.UUID, session: AsyncSession = Depends(g
         document_type=document.document_type,
         classification_confidence=document.classification_confidence,
         needs_review=document.needs_review,
+        original_filename=document.original_filename,
+        parent_document_id=document.parent_document_id,
+        page_start=document.page_start,
+        page_end=document.page_end,
         extraction=document.extraction.payload if document.extraction else None,
         validation_issues=[
             ValidationIssueResponse(

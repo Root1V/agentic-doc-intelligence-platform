@@ -12,7 +12,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -55,6 +55,16 @@ class Document(Base):
     storage_key: Mapped[str] = mapped_column(String(512), nullable=False)
     original_filename: Mapped[str] = mapped_column(String(256), nullable=False)
     needs_review: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Set only on a child Document spawned by segmentation.detect_segments()
+    # finding more than one logical document bundled in one physical upload
+    # (e.g. an email + a payment schedule + contract T&Cs in one PDF) — the
+    # parent row (the original upload) is marked status="segmented" and
+    # never gets its own classification/extraction. page_start/page_end are
+    # absolute page numbers into the ORIGINAL physical file, not renumbered,
+    # so citations still point at the page a human reviewer would see.
+    parent_document_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), nullable=True)
+    page_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    page_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

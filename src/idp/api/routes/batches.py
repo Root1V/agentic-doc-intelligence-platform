@@ -26,6 +26,9 @@ class DocumentSummary(BaseModel):
     classification_confidence: float | None
     needs_review: bool
     original_filename: str
+    parent_document_id: uuid.UUID | None
+    page_start: int | None
+    page_end: int | None
 
 
 class BatchStatusResponse(BaseModel):
@@ -85,6 +88,9 @@ async def get_batch(batch_id: uuid.UUID, session: AsyncSession = Depends(get_db_
                 classification_confidence=doc.classification_confidence,
                 needs_review=doc.needs_review,
                 original_filename=doc.original_filename,
+                parent_document_id=doc.parent_document_id,
+                page_start=doc.page_start,
+                page_end=doc.page_end,
             )
             for doc in batch.documents
         ],

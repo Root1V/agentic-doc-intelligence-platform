@@ -8,4 +8,16 @@ Order matters only in that ``registry`` must be importable first; it has no
 dependency back on these, so there is no cycle.
 """
 
-from idp.extraction import authorization_letter, generic, insurance_disclosure, loan_application, payslip  # noqa: F401
+from idp.extraction import (  # noqa: F401
+    account_statement,
+    authorization_letter,
+    credit_summary,
+    email_correspondence,
+    foreign_resident_id,
+    generic,
+    insurance_disclosure,
+    loan_application,
+    loan_approval_remittance,
+    loan_payment_schedule,
+    payslip,
+)

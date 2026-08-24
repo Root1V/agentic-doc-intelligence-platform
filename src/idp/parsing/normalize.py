@@ -45,6 +45,20 @@ class ParsedDocument(BaseModel):
         return [b for b in self.blocks if b.block_type == block_type]
 
 
+def slice_by_pages(parsed: ParsedDocument, start_page: int, end_page: int) -> ParsedDocument:
+    """A view of ``parsed`` restricted to one physical-upload page range —
+    used when segmentation finds more than one logical document bundled in
+    a single upload. Absolute page numbers are kept as-is (not renumbered to
+    0 for the slice) so grounding/citations still point at the original
+    physical document's page, matching what a human reviewer sees."""
+    return ParsedDocument(
+        backend=parsed.backend,
+        page_count=parsed.page_count,
+        blocks=[b for b in parsed.blocks if start_page <= b.page <= end_page],
+        page_images_b64={p: img for p, img in parsed.page_images_b64.items() if start_page <= p <= end_page},
+    )
+
+
 def load_pages(file_bytes: bytes, filename: str) -> list[Image.Image]:
     """Renders a document to one RGB image per page. Shared by every
     ``ParserBackend`` so page-image grounding for the agentic loop's
