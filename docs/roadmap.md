@@ -1,0 +1,59 @@
+# Roadmap — detalle
+
+Una sección por item de [roadmap.md](../roadmap.md). Sin bitácora de cambios — eso vive en los commits.
+
+## RM-01 — Pipeline agéntico de documentos
+Done. Commit `b0d98c3`.
+
+## RM-02 — Segmentación + tipos de documento
+Done. Commits `af76c32`, `9797a2f`, `f6f71fb`.
+
+## RM-03 — Descubrimiento automático de tipos
+Done. Commit `ea42c4b`.
+
+## RM-04 — Módulo web (frontend)
+Done. Commits `0bda1ab`, `d4cdc8f`.
+
+## RM-05 — Vista de auditoría
+**Why:** `audit_log` ya se llenaba en cada corrección desde RM-01; faltaba una ruta que lo expusiera.
+**Scope:** solo lectura, sin filtros. Commit `f7d33a3`.
+
+## RM-06 — Browser de documentos
+**Why:** el dashboard solo mostraba unos pocos documentos recientes, sin forma de filtrar el corpus completo.
+**Scope:** filtros por estado/tipo/revisión, combinables. Sin búsqueda de texto (eso es RM-11). Commit `18d5ccd`.
+
+## RM-07 — Métrica de tiempo ahorrado
+**Why:** pedido explícito, con la condición de que el supuesto (min/documento) fuera configurable y visible, no un número inventado.
+**Scope:** una tarjeta en el dashboard, cálculo simple sobre documentos completados. Commit `7a6529c`.
+
+## RM-08 — Roles de usuario
+**Why:** hasta este punto cualquier usuario autenticado podía hacer cualquier acción; se necesitaba distinguir quién puede ejecutar vs. solo ver.
+**Scope:** tres roles (admin/operador/visor), enforcement en cada endpoint mutante, no solo en la UI. No incluye permisos granulares por recurso. Commit `e265f55`.
+
+## RM-09 — Pipeline visual en tiempo real
+**Why:** `/batches/:id` solo mostraba "procesando" sin detalle de en qué etapa estaba cada documento.
+**Scope:** barra de progreso con las etapas reales del pipeline (parsing/clasificando/extrayendo/validando). Commit `4d0f397`.
+
+## RM-10 — Server-Sent Events
+**Why:** el polling de 2s generaba una petición nueva por cliente cada 2s; SSE deja que el servidor empuje solo cuando hay cambio real.
+**Scope:** reemplaza el polling en `/batches/:id`. No se extendió a otras vistas. Commit `4734018`.
+
+## RM-11 — Búsqueda de texto libre
+**Why:** los filtros de RM-06 no cubrían "encontrar un documento por su contenido".
+**Scope:** busca nombre de archivo y valores extraídos, combinable con los filtros existentes. Commit `0e126c5`.
+
+## RM-12 — Editor de sugerencias de tipo
+**Why:** antes solo se podía aceptar/rechazar una sugerencia del LLM tal cual — sin forma de corregir un campo mal nombrado sin rechazar toda la propuesta.
+**Scope:** edita el borrador (campos, nombre) mientras sigue pendiente. Nunca genera código ni registra el tipo — eso sigue siendo un cambio de código deliberado. Commit `c2675b4`.
+
+## RM-13 — Vista de auditoría de validación
+**Why:** los `validation_issues` ya se persistían por cada regla que no pasaba, sin ninguna vista que los cruzara entre documentos.
+**Scope:** lista filtrable por categoría/severidad/tipo. Solo lectura. Commit `988b5aa`.
+
+## RM-14 — Motor de reglas configurables (CEL)
+**Why:** se pidió poder agregar/modificar/desactivar reglas de validación sin depender de un desarrollador. Generar Python real desde la web se descartó por riesgo de seguridad (ejecución de código no revisado); CEL (lenguaje sandboxed de Google, sin efectos secundarios) permite que una regla activada se ejecute de inmediato sin ese riesgo.
+**Scope:** cubre categorías `self`/`request_input`/`reference_data` (comparaciones puras de campos). `cross_document` (fuzzy-matching + LLM) y `external_system` (red) siguen siendo código — CEL no puede expresar esa lógica de forma segura. Incluye activar/desactivar cualquier regla, incluidas las hardcodeadas. Commits `ea77e56`, `d5693a6`.
+
+## RM-15 — UI de Integraciones
+**Why:** el dashboard de referencia original incluía una sección de integraciones; no se construyó porque no hay ningún sistema externo real conectado detrás.
+**Scope:** bloqueado hasta elegir un sistema real (`ExternalSystemPort` en `src/idp/validation/ports.py` es hoy un stub que siempre responde "no verificado"). Requiere: elegir el sistema, construir el adaptador real, y solo entonces la UI tiene algo que mostrar.

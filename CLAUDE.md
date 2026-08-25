@@ -60,3 +60,26 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. Roadmap & Backlog
+
+**Two files, split by cost: an index you skim, and detail you pay for only when you need it.**
+
+A single roadmap file that mixes a status overview with full reasoning forces every reader to pay the cost of the longest entry just to answer "what's left?" or "what's the state of X?". Splitting index from detail makes the cheap queries actually cheap (read only the table) and the expensive one (understand one item deeply enough to work on it) opt-in per item.
+
+**`roadmap.md`** (repo root) — the index.
+- One markdown table. One row per item, one line of description each, no exceptions — if a row needs more than a line, the extra belongs in the detail file, not here.
+- Short, consistent ID prefix (e.g. `RM-01`, `RM-02`, ...), reused verbatim in branch names and commit messages so an item is traceable end-to-end.
+- Status column stays simple: `done` / `todo`. Add `in-progress` / `blocked` only if the project actually produces items that sit in those states for a while — don't pre-add statuses nothing uses.
+- Never grows past a table. If you're tempted to add a paragraph here, it goes in the detail file instead.
+
+**`docs/roadmap.md`** (or the project's existing context folder, if it has one) — the detail.
+- One section per item, keyed by its ID.
+- At most two fields: **Why** (1-3 sentences — the actual reason this exists, not a restatement of the description) and **Scope** (short bullets: what's included, and what's deliberately left out).
+- Not a changelog and not a running log of what happened — that's what commits and PRs are for. This file explains *why an item exists and what it covers*, nothing else.
+
+**Maintenance rules (apply every time either file is touched):**
+- Never duplicate text between the two files — the index links to an ID, it doesn't restate the detail.
+- When an item has been `done` and stable for a while, trim its detail section down to 2-3 lines plus a link to the commit/PR — don't preserve the full original reasoning forever.
+- Before adding anything to either file, ask: *is this needed to decide or act, or is it just history?* History doesn't go in either file.
+- Large architectural decisions don't live in the roadmap. If the project has (or grows) a dedicated place for those, the roadmap only links to it — it never becomes the second home for that reasoning.
+
