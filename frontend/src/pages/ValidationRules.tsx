@@ -405,7 +405,7 @@ function ActiveRulesList() {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={resolve.isPending}
+                  disabled={resolve.isPending && resolve.variables?.id === rule.id}
                   onClick={() => resolve.mutate({ id: rule.id, decision: 'disable' }, { onSuccess: () => toast.success('Regla desactivada.') })}
                 >
                   Desactivar
@@ -440,6 +440,7 @@ function ToggleList() {
             <TableHead>Categoría</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead />
+            <TableHead>Descripción</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -460,7 +461,7 @@ function ToggleList() {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={setToggle.isPending}
+                  disabled={setToggle.isPending && setToggle.variables?.ruleId === toggle.rule_id}
                   onClick={() =>
                     setToggle.mutate(
                       { ruleId: toggle.rule_id, action: toggle.status === 'active' ? 'disable' : 'enable' },
@@ -471,6 +472,7 @@ function ToggleList() {
                   {toggle.status === 'active' ? 'Desactivar' : 'Activar'}
                 </Button>
               </TableCell>
+              <TableCell className="max-w-sm text-xs text-muted-foreground">{toggle.description}</TableCell>
             </TableRow>
           ))}
         </TableBody>

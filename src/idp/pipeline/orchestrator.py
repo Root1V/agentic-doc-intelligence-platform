@@ -89,11 +89,31 @@ def _hardcoded_rules(settings: Settings) -> list[ValidationRule]:
     ]
 
 
-def hardcoded_rule_metadata(settings: Settings) -> list[tuple[str, str]]:
-    """(rule_id, category) for every hardcoded rule — used by
+HARDCODED_RULE_DESCRIPTIONS: dict[str, str] = {
+    "self.payslip_arithmetic_consistency": "Verifica que el neto de la boleta de pago sea igual al bruto menos los descuentos totales (con una pequeña tolerancia).",
+    "self.insurance_disclosure_dni_format_valid": "Verifica que el DNI del asegurado tenga el formato peruano valido (8 digitos numericos).",
+    "self.authorization_letter_dni_format_valid": "Verifica que el DNI del cliente en la carta de autorizacion tenga formato valido (8 digitos).",
+    "self.loan_application_dni_format_valid": "Verifica que el DNI del solicitante en la solicitud de prestamo tenga formato valido (8 digitos).",
+    "self.loan_approval_remittance_dni_format_valid": "Verifica que el DNI del solicitante en la remesa de aprobacion tenga formato valido (8 digitos).",
+    "self.loan_payment_schedule_dni_format_valid": "Verifica que el DNI del cliente en el cronograma de pagos tenga formato valido (8 digitos).",
+    "self.credit_summary_dni_format_valid": "Verifica que el DNI del miembro en el resumen crediticio tenga formato valido (8 digitos).",
+    "self.account_statement_dni_format_valid": "Verifica que el DNI del miembro en el estado de cuenta tenga formato valido (8 digitos).",
+    "self.debt_subrogation_authorization_dni_format_valid": "Verifica que el DNI del cliente en la autorizacion de subrogacion de deuda tenga formato valido (8 digitos).",
+    "self.debt_capacity_calculation_dni_format_valid": "Verifica que el DNI del cliente en el calculo de capacidad de endeudamiento tenga formato valido (8 digitos).",
+    "request_input.expected_employee_code_matches": "Compara el codigo de empleado extraido de la boleta contra el codigo esperado ingresado al subir la solicitud.",
+    "batch.duplicate_identifier": "Detecta si el mismo identificador (codigo de empleado o numero de poliza) aparece duplicado entre documentos del mismo tipo dentro de la misma solicitud.",
+    "batch.employee_name_matches_insured_name": "Compara el nombre del empleado en la boleta contra el nombre del asegurado en la declaracion de seguro de la misma solicitud (tolera variaciones de formato; escala a un LLM en casos ambiguos).",
+    "reference_data.employee_code_exists": "Verifica que el codigo de empleado extraido exista en la tabla interna de empleados de referencia.",
+    "reference_data.employee_name_matches_reference": "Cuando no hay codigo de empleado, busca el nombre extraido contra la tabla de empleados de referencia por similitud (tolera variaciones; escala a un LLM en casos ambiguos).",
+    "external_system.insurance_policy_verified": "Verifica el numero de poliza contra un sistema externo de la aseguradora — hoy es un stub sin integracion real, ver /document-types u otra documentacion sobre 'sistema externo'.",
+}
+
+
+def hardcoded_rule_metadata(settings: Settings) -> list[tuple[str, str, str]]:
+    """(rule_id, category, description) for every hardcoded rule — used by
     GET/POST /validation-rules/toggles/* so that endpoint never has to
     hand-duplicate the exact rule_id strings from validation/rules/*.py."""
-    return [(r.rule_id, r.category.value) for r in _hardcoded_rules(settings)]
+    return [(r.rule_id, r.category.value, HARDCODED_RULE_DESCRIPTIONS.get(r.rule_id, "")) for r in _hardcoded_rules(settings)]
 
 
 async def build_default_rules(settings: Settings, session: AsyncSession) -> list[ValidationRule]:

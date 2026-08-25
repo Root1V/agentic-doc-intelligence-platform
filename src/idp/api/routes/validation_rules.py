@@ -294,6 +294,7 @@ async def disable_active_rule(
 class ToggleRuleResponse(BaseModel):
     rule_id: str
     category: str
+    description: str
     status: str  # "active" | "disabled"
 
 
@@ -305,20 +306,26 @@ async def list_toggles(
     repo = ValidationRuleRepository(session)
     existing = {row.rule_id: row for row in await repo.list_all(kind="toggle")}
     return [
-        ToggleRuleResponse(rule_id=rule_id, category=category, status=existing[rule_id].status if rule_id in existing else "active")
-        for rule_id, category in hardcoded_rule_metadata(settings)
+        ToggleRuleResponse(
+            rule_id=rule_id,
+            category=category,
+            description=description,
+            status=existing[rule_id].status if rule_id in existing else "active",
+        )
+        for rule_id, category, description in hardcoded_rule_metadata(settings)
     ]
 
 
 async def _set_toggle(rule_id: str, decision: str, settings: Settings, session: AsyncSession, current_user: User) -> ToggleRuleResponse:
-    category = dict(hardcoded_rule_metadata(settings)).get(rule_id)
-    if category is None:
+    metadata = {rid: (category, description) for rid, category, description in hardcoded_rule_metadata(settings)}
+    if rule_id not in metadata:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown hardcoded rule_id")
+    category, description = metadata[rule_id]
     repo = ValidationRuleRepository(session)
     row = await repo.get_or_create_toggle(rule_id=rule_id, category=category)
     row = await repo.set_status(row.id, status=decision, reviewer_identity=current_user.name)
     await session.commit()
-    return ToggleRuleResponse(rule_id=row.rule_id, category=row.category, status=row.status)
+    return ToggleRuleResponse(rule_id=row.rule_id, category=row.category, description=description, status=row.status)
 
 
 @router.post("/toggles/{rule_id:path}/disable", response_model=ToggleRuleResponse, dependencies=[Depends(require_role("operador", "admin"))])

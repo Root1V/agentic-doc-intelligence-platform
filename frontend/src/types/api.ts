@@ -248,6 +248,7 @@ export interface UpdateRuleRequest {
 export interface ToggleRule {
   rule_id: string
   category: string
+  description: string
   status: 'active' | 'disabled'
 }
 
