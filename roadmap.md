@@ -24,3 +24,4 @@
 | RM-18 | Columna de página + salto automático | todo | Tabla de campos: columna con la página de cada uno; clic navega el visor a esa página. |
 | RM-19 | Persistir nombre/descripción de tipo de documento | todo | Guardar en BD nombre visible y resumen por tipo (hoy solo viven en código); rediseñar `/document-types`. |
 | RM-20 | Mejorar columna "Documento" en /audit y /validation | todo | Mostrar nombre del documento + archivo físico como subtítulo tenue, con link al detalle. |
+| RM-21 | Resumen del documento en /documents/:id | done | El LLM genera un resumen breve por documento extraído, mostrado antes de la tabla de campos. |

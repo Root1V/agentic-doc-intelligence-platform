@@ -77,3 +77,7 @@ Done. Commits `0bda1ab`, `d4cdc8f`.
 ## RM-20 — Mejorar columna "Documento" en /audit y /validation
 **Why:** hoy esas tablas muestran un link genérico o el nombre físico del PDF, sin un nombre legible del documento. Depende de RM-19 para tener de dónde sacar ese nombre.
 **Scope:** mostrar el nombre del documento, con el nombre físico del PDF debajo en texto tenue como subtítulo; el nombre enlaza al detalle del documento. Mismo patrón en ambas páginas — candidato a un componente compartido.
+
+## RM-21 — Resumen del documento en /documents/:id
+**Why:** pedido por el usuario validando RM-16 — antes de la tabla de campos extraídos quería un resumen breve de qué trata el documento. Se evaluaron dos opciones (descripción genérica del tipo, ya disponible hoy, vs. un resumen real por documento) y el usuario eligió la segunda pese al mayor esfuerzo. `GenericSchema` ya tenía un campo `summary` — solo faltaba replicarlo en los 12 esquemas tipados.
+**Scope:** agrega `summary: Extracted[str] | None` a 11 de los 12 esquemas (`email_correspondence` ya tenía `body_summary` con el mismo propósito — no se duplicó); `GenericSchema` ya lo tenía. La extracción agéntica es 100% schema-driven, no hizo falta tocar los extractores. Frontend: extrae `summary`/`body_summary` de la grilla de campos y lo muestra como bloque de texto aparte, arriba de la tabla. Documentos ya extraídos antes de este cambio no tienen resumen (sin backfill). Commit `e4ea81e`.
