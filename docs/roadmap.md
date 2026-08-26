@@ -59,8 +59,8 @@ Done. Commits `0bda1ab`, `d4cdc8f`.
 **Scope:** bloqueado hasta elegir un sistema real (`ExternalSystemPort` en `src/idp/validation/ports.py` es hoy un stub que siempre responde "no verificado"). Requiere: elegir el sistema, construir el adaptador real, y solo entonces la UI tiene algo que mostrar.
 
 ## RM-16 — Corregir layout del visor de documento
-**Why:** reportado por el usuario probando `/documents/:id` — la imagen del PDF se sobrepone visualmente a la sección que muestra el resumen y los campos extraídos, en vez de convivir en un layout ordenado.
-**Scope:** rediseñar el layout (probablemente dos columnas con anchos/overflow bien definidos) para que ambas secciones nunca se superpongan.
+**Why:** reportado por el usuario probando `/documents/:id` — react-pdf renderizaba a un ancho fijo en px, y un CSS Grid item no se encoge por debajo del ancho intrínseco de su contenido salvo que se le indique, así que en ventanas angostas el PDF desbordaba su columna.
+**Scope:** `PdfViewer` mide su contenedor con `ResizeObserver` y renderiza al ancho real disponible; `min-w-0` en ambas columnas del grid como defensa adicional. Commit `df53ced`.
 
 ## RM-17 — Corregir bounding box resaltado
 **Why:** reportado por el usuario — al hacer clic en un campo (o varios) para ver dónde se extrajo, el cuadro que se dibuja sobre el PDF aparece desubicado y no coincide con el valor real extraído.
