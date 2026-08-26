@@ -57,3 +57,23 @@ Done. Commits `0bda1ab`, `d4cdc8f`.
 ## RM-15 — UI de Integraciones
 **Why:** el dashboard de referencia original incluía una sección de integraciones; no se construyó porque no hay ningún sistema externo real conectado detrás.
 **Scope:** bloqueado hasta elegir un sistema real (`ExternalSystemPort` en `src/idp/validation/ports.py` es hoy un stub que siempre responde "no verificado"). Requiere: elegir el sistema, construir el adaptador real, y solo entonces la UI tiene algo que mostrar.
+
+## RM-16 — Corregir layout del visor de documento
+**Why:** reportado por el usuario probando `/documents/:id` — la imagen del PDF se sobrepone visualmente a la sección que muestra el resumen y los campos extraídos, en vez de convivir en un layout ordenado.
+**Scope:** rediseñar el layout (probablemente dos columnas con anchos/overflow bien definidos) para que ambas secciones nunca se superpongan.
+
+## RM-17 — Corregir bounding box resaltado
+**Why:** reportado por el usuario — al hacer clic en un campo (o varios) para ver dónde se extrajo, el cuadro que se dibuja sobre el PDF aparece desubicado y no coincide con el valor real extraído.
+**Scope:** corregir el cálculo de posición del overlay (probablemente un desfase en cómo se escala el bbox normalizado contra el tamaño renderizado de la página).
+
+## RM-18 — Columna de página + salto automático
+**Why:** la tabla de campos extraídos no indica en qué página del PDF está cada campo; seleccionar un campo de otra página no mueve el visor hacia ella.
+**Scope:** agregar una columna "Página" al inicio de la tabla. Al hacer clic en un campo de otra página, el visor debe navegar a esa página y resaltar el campo — depende de que RM-17 esté resuelto para que el resaltado sea correcto.
+
+## RM-19 — Persistir nombre/descripción de tipo de documento
+**Why:** hoy el catálogo de tipos (`/document-types`, "Plantillas") se arma leyendo constantes de código (`TYPE_DESCRIPTIONS`, `SCHEMA_BY_DOCUMENT_TYPE`); el usuario quiere que el nombre visible y la descripción de cada tipo (ej. `loan_payment_schedule` → "Cronograma de Pagos") vivan en la base de datos, no solo en código.
+**Scope:** agregar almacenamiento en BD para nombre/descripción por tipo de documento; mejorar el diseño del listado en `/document-types`. Definir al implementar: tabla nueva de tipos vs. otra estructura, y si el "nombre del documento" que pide RM-20 sale de aquí.
+
+## RM-20 — Mejorar columna "Documento" en /audit y /validation
+**Why:** hoy esas tablas muestran un link genérico o el nombre físico del PDF, sin un nombre legible del documento. Depende de RM-19 para tener de dónde sacar ese nombre.
+**Scope:** mostrar el nombre del documento, con el nombre físico del PDF debajo en texto tenue como subtítulo; el nombre enlaza al detalle del documento. Mismo patrón en ambas páginas — candidato a un componente compartido.

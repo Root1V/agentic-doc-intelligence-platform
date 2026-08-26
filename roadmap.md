@@ -19,3 +19,8 @@
 | RM-13 | Vista de auditoría de validación | done | `/validation` — observaciones de validación cruzando documentos. |
 | RM-14 | Motor de reglas configurables (CEL) | done | `/validation-rules` — crear/editar/activar/desactivar reglas sin tocar código. |
 | RM-15 | UI de Integraciones | blocked | Falta elegir un sistema externo real — hoy `ExternalSystemPort` es un stub. |
+| RM-16 | Corregir layout del visor de documento | todo | En `/documents/:id`, el PDF se superpone al panel de resumen/campos extraídos. |
+| RM-17 | Corregir bounding box resaltado | todo | Al seleccionar un campo, el cuadro resaltado sobre el PDF aparece desubicado. |
+| RM-18 | Columna de página + salto automático | todo | Tabla de campos: columna con la página de cada uno; clic navega el visor a esa página. |
+| RM-19 | Persistir nombre/descripción de tipo de documento | todo | Guardar en BD nombre visible y resumen por tipo (hoy solo viven en código); rediseñar `/document-types`. |
+| RM-20 | Mejorar columna "Documento" en /audit y /validation | todo | Mostrar nombre del documento + archivo físico como subtítulo tenue, con link al detalle. |
