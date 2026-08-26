@@ -3,7 +3,7 @@
 // every bbox in this platform's data is already normalized [0,1] — no
 // pixel math needed, the overlay container just has to be the same
 // element react-pdf renders the page canvas into.
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Document, Page } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -21,14 +21,36 @@ interface PdfViewerProps {
   page: number
   onPageChange: (page: number) => void
   highlights: BboxHighlight[]
-  width?: number
+  /** Upper bound on the rendered page width in px — the page still shrinks
+   * below this to fit a narrower container. */
+  maxWidth?: number
 }
 
-export function PdfViewer({ fileUrl, page, onPageChange, highlights, width = 640 }: PdfViewerProps) {
+export function PdfViewer({ fileUrl, page, onPageChange, highlights, maxWidth = 640 }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState(maxWidth)
+
+  // Sizes the PDF page to whatever room the surrounding layout actually
+  // gives this column instead of always rendering at a fixed pixel width —
+  // a fixed width doesn't shrink with its CSS Grid column, so on a narrow
+  // viewport the page used to overflow its column and visually cover the
+  // extraction panel next to it.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width
+      if (width) setContainerWidth(width)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  const width = Math.min(containerWidth, maxWidth)
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div ref={containerRef} className="flex w-full min-w-0 flex-col items-center gap-3">
       <Document
         file={fileUrl}
         onLoadSuccess={({ numPages: n }) => setNumPages(n)}

@@ -78,7 +78,7 @@ export function DocumentDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 flex-col gap-3">
           {fileUrl ? (
             <>
               <Button variant="outline" size="sm" className="self-start" onClick={() => setShowAllOnPage((v) => !v)}>
@@ -93,7 +93,7 @@ export function DocumentDetailPage() {
           )}
         </div>
 
-        <Tabs defaultValue="extraction">
+        <Tabs defaultValue="extraction" className="min-w-0">
           <TabsList>
             <TabsTrigger value="extraction">Extracción</TabsTrigger>
             <TabsTrigger value="validation">
