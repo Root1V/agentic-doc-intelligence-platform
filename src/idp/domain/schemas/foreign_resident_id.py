@@ -35,3 +35,4 @@ class ForeignResidentIdSchema(BaseModel):
         default_factory=list,
         description="Una entrada por cada persona cuyo carne de extranjeria aparece en el documento — puede haber mas de una.",
     )
+    summary: Extracted[str] | None = Field(default=None, description="Resumen breve (1-2 frases) sobre que es este documento y su contenido principal.")

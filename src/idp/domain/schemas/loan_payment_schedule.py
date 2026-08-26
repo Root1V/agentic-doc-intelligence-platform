@@ -44,3 +44,4 @@ class LoanPaymentScheduleSchema(BaseModel):
     installments: list[LoanInstallment] = Field(
         default_factory=list, description="Cada fila de la tabla de cronograma de pagos, en orden — una entrada por cuota."
     )
+    summary: Extracted[str] | None = Field(default=None, description="Resumen breve (1-2 frases) sobre que es este documento y su contenido principal.")

@@ -70,3 +70,4 @@ class DebtCapacityCalculationSchema(BaseModel):
     income_lines: list[IncomeOrDeductionLine] = Field(
         default_factory=list, description="Cada linea de ingreso/descuento numerada (Ingreso 1, Ingreso 2, Descuento 1, Descuento 2, ...)."
     )
+    summary: Extracted[str] | None = Field(default=None, description="Resumen breve (1-2 frases) sobre que es este documento y su contenido principal.")

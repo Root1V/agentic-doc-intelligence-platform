@@ -38,3 +38,4 @@ class PayslipSchema(BaseModel):
     total_deductions: Extracted[float]
     net_pay: Extracted[float]
     concepts: list[PayslipConcept] = Field(default_factory=list)
+    summary: Extracted[str] | None = Field(default=None, description="Resumen breve (1-2 frases) sobre que es este documento y su contenido principal.")

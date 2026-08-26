@@ -28,3 +28,4 @@ class AccountStatementSchema(BaseModel):
     product_capital_balance: Extracted[float] | None = Field(default=None, description="Saldo capital pendiente del producto.")
     product_installments_progress: Extracted[str] | None = Field(default=None, description="Avance de cuotas del producto (p. ej. '8/24'), si se indica.")
     next_discount_amount: Extracted[float] | None = Field(default=None, description="Monto del proximo descuento/cuota programada, si se indica.")
+    summary: Extracted[str] | None = Field(default=None, description="Resumen breve (1-2 frases) sobre que es este documento y su contenido principal.")

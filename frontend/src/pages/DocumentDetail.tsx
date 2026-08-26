@@ -35,10 +35,16 @@ export function DocumentDetailPage() {
   }
 
   const flat = useMemo(() => (document?.extraction ? flattenExtraction(document.extraction) : {}), [document])
-  const { fields, tables } = useMemo(
+  const { fields: allFields, tables } = useMemo(
     () => (document?.extraction ? splitExtractionPayload(document.extraction) : { fields: [], tables: [] }),
     [document],
   )
+  // "summary"/"body_summary" (email_correspondence already had its own
+  // summary-shaped field before this one existed) is a document overview,
+  // not a field among the others — pulled out of the grid and shown as
+  // prose above it instead.
+  const summaryEnvelope = allFields.find(([name]) => name === 'summary' || name === 'body_summary')?.[1]
+  const fields = allFields.filter(([name]) => name !== 'summary' && name !== 'body_summary')
 
   function selectField(key: string, envelope: Extracted<unknown>) {
     setSelectedKey(key)
@@ -110,6 +116,12 @@ export function DocumentDetailPage() {
               <p className="text-sm text-muted-foreground">Sin datos extraídos.</p>
             ) : (
               <>
+                {summaryEnvelope && typeof summaryEnvelope.value === 'string' && summaryEnvelope.value && (
+                  <div className="rounded-lg border bg-muted/40 px-3 py-2.5">
+                    <p className="text-xs font-medium text-muted-foreground">Resumen del documento</p>
+                    <p className="text-sm">{summaryEnvelope.value}</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   {fields.map(([name, envelope]) => (
                     <ExtractionField

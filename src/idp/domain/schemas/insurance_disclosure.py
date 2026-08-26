@@ -32,3 +32,4 @@ class InsuranceDisclosureSchema(BaseModel):
     insurance_type: Extracted[str] | None = None
     declaration_date: Extracted[str] | None = None
     declaration_place: Extracted[str] | None = None
+    summary: Extracted[str] | None = Field(default=None, description="Resumen breve (1-2 frases) sobre que es este documento y su contenido principal.")

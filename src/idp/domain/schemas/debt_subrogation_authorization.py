@@ -51,3 +51,4 @@ class DebtSubrogationAuthorizationSchema(BaseModel):
     deposit_account_number: Extracted[str] | None = Field(
         default=None, description="Numero de la 'CUENTA DE DEPOSITO' donde se desembolsaria el nuevo prestamo, si el cliente la indico."
     )
+    summary: Extracted[str] | None = Field(default=None, description="Resumen breve (1-2 frases) sobre que es este documento y su contenido principal.")

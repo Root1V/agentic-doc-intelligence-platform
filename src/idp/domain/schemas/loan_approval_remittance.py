@@ -33,3 +33,4 @@ class LoanApprovalRemittanceSchema(BaseModel):
     )
     entry_date: Extracted[str] | None = Field(default=None, description="'Fecha de ingreso' del caso al sistema.")
     position: Extracted[str] | None = Field(default=None, description="'Cargo', si esta presente.")
+    summary: Extracted[str] | None = Field(default=None, description="Resumen breve (1-2 frases) sobre que es este documento y su contenido principal.")

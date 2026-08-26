@@ -8,7 +8,7 @@ FVX0007042584) once the pattern proved extractable with a stable field set."""
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from idp.domain.envelope import Extracted
 
@@ -24,3 +24,4 @@ class AuthorizationLetterSchema(BaseModel):
     document_date: Extracted[str] | None = None
     document_place: Extracted[str] | None = None
     reference: Extracted[str] | None = None  # asunto/referencia de la carta
+    summary: Extracted[str] | None = Field(default=None, description="Resumen breve (1-2 frases) sobre que es este documento y su contenido principal.")

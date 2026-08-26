@@ -80,3 +80,4 @@ class LoanApplicationSchema(BaseModel):
     approved_amount: Extracted[float] | None = Field(default=None, description="'MONTO A FINANCIAR' en la seccion de evaluacion del banco (puede diferir de loan_amount_requested).")
     approved_interest_rate: Extracted[str] | None = Field(default=None, description="'TASA INTERES' en la seccion de evaluacion del banco (no el '% A FINANCIAR').")
     approved_term_months: Extracted[int] | None = Field(default=None, description="'PLAZO MESES' aprobado en la seccion de evaluacion del banco.")
+    summary: Extracted[str] | None = Field(default=None, description="Resumen breve (1-2 frases) sobre que es este documento y su contenido principal.")

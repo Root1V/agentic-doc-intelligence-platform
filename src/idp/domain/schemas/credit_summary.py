@@ -28,3 +28,4 @@ class CreditSummarySchema(BaseModel):
     monthly_installment: Extracted[float] | None = Field(default=None, description="Monto de la cuota mensual.")
     interest_rate: Extracted[str] | None = Field(default=None, description="Tasa de interes del credito.")
     status: Extracted[str] | None = Field(default=None, description="Estado del credito (p. ej. 'OTORGADO').")
+    summary: Extracted[str] | None = Field(default=None, description="Resumen breve (1-2 frases) sobre que es este documento y su contenido principal.")
